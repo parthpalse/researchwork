@@ -1,0 +1,170 @@
+# Trust-First AI Nutrition Risk System — Thresholds & Rules
+# All fuzzy membership boundaries and expert certainty factors.
+# NEVER hardcode these values in Python — always load from this file.
+
+fuzzy_sets:
+  # Anthropometric fuzzy sets
+  weight_for_height_z:
+    severely_low:
+      type: left_shoulder
+      params: [-3.0, -2.0]      # 1.0 at z ≤ -3, linear to 0 at z = -2
+    low:
+      type: triangular
+      params: [-3.0, -2.5, -1.0] # peak at -2.5
+    normal:
+      type: triangular
+      params: [-1.0, 0.0, 1.0]   # peak at 0
+    high:
+      type: right_shoulder
+      params: [1.0, 2.0]         # 0 at z ≤ 1, linear to 1.0 at z ≥ 2
+
+  muac_cm:
+    severe_risk:
+      type: left_shoulder
+      params: [11.0, 11.5]       # 1.0 at ≤ 11.0, linear to 0 at 11.5
+    moderate_risk:
+      type: triangular
+      params: [11.0, 12.0, 13.0] # peak at 12.0
+    normal:
+      type: right_shoulder
+      params: [12.5, 13.5]       # 0 at ≤ 12.5, linear to 1.0 at ≥ 13.5
+
+  # Dietary fuzzy sets
+  protein_pct_rda:
+    deficient:
+      type: left_shoulder
+      params: [30.0, 50.0]       # 1.0 at ≤ 30%, linear to 0 at 50%
+    low:
+      type: triangular
+      params: [40.0, 65.0, 80.0]
+    adequate:
+      type: triangular
+      params: [70.0, 100.0, 130.0]
+    excess:
+      type: right_shoulder
+      params: [120.0, 150.0]
+
+  sugar_g:
+    normal:
+      type: left_shoulder
+      params: [20.0, 30.0]       # 1.0 at ≤ 20g
+    moderate_excess:
+      type: triangular
+      params: [25.0, 37.5, 50.0]
+    high_excess:
+      type: right_shoulder
+      params: [45.0, 55.0]
+
+  iron_pct_rda:
+    deficient:
+      type: left_shoulder
+      params: [30.0, 50.0]
+    low:
+      type: triangular
+      params: [40.0, 65.0, 80.0]
+    adequate:
+      type: right_shoulder
+      params: [75.0, 100.0]
+
+  gi_score:
+    low:
+      type: left_shoulder
+      params: [45.0, 55.0]
+    medium:
+      type: triangular
+      params: [50.0, 62.5, 75.0]
+    high:
+      type: right_shoulder
+      params: [70.0, 80.0]
+
+  nova_score:
+    minimally_processed:
+      type: left_shoulder
+      params: [1.3, 1.7]
+    processed:
+      type: triangular
+      params: [1.5, 2.0, 2.5]
+    ultra_processed:
+      type: right_shoulder
+      params: [2.3, 2.7]
+
+# Categorical fuzzy sets (used by fuzzify_categorical)
+categorical_sets:
+  growth_trend:
+    declining:
+      declining: 1.0
+      stable: 0.0
+      improving: 0.0
+    stable:
+      declining: 0.0
+      stable: 1.0
+      improving: 0.0
+    improving:
+      declining: 0.0
+      stable: 0.0
+      improving: 1.0
+
+# Rules — antecedents as [field, fuzzy_set] pairs
+# conclusion as [category, level] — category groups the risk domain,
+# level is the severity within that domain
+rules:
+  - id: R1
+    antecedents:
+      - [weight_for_height_z, severely_low]
+      - [muac_cm, severe_risk]
+    conclusion: [risk, high]
+    expert_cf: 0.9
+
+  - id: R2
+    antecedents:
+      - [weight_for_height_z, low]
+      - [growth_trend, declining]
+    conclusion: [risk, moderate]
+    expert_cf: 0.7
+
+  - id: R3
+    antecedents:
+      - [weight_for_height_z, normal]
+      - [muac_cm, normal]
+    conclusion: [risk, low]
+    expert_cf: 0.85
+
+  - id: R4
+    antecedents:
+      - [muac_cm, severe_risk]
+    conclusion: [risk, high]
+    expert_cf: 0.75
+
+  - id: R5
+    antecedents:
+      - [growth_trend, declining]
+    conclusion: [risk, moderate]
+    expert_cf: 0.6
+
+  - id: R6
+    antecedents:
+      - [protein_pct_rda, deficient]
+      - [growth_trend, declining]
+    conclusion: [risk, high]
+    expert_cf: 0.8
+
+  - id: R7
+    antecedents:
+      - [sugar_g, high_excess]
+      - [gi_score, high]
+    conclusion: [dietary_risk, high]
+    expert_cf: 0.7
+
+  - id: R8
+    antecedents:
+      - [iron_pct_rda, deficient]
+    conclusion: [micronutrient_risk, moderate]
+    expert_cf: 0.75
+
+  - id: R9
+    antecedents:
+      - [nova_score, ultra_processed]
+    conclusion: [dietary_risk, moderate]
+    expert_cf: 0.65
+
+cf_combination_method: mycin

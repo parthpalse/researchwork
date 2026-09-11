@@ -1,0 +1,53 @@
+# ICMR 2020 RDA for Indian Children (Ages 4-10)
+# Used to compute %RDA for dietary risk fuzzification.
+# All values are per day.
+
+# Age group boundaries in months: [min_months, max_months]
+age_groups:
+  age_4_6: [48, 72]     # 4-6 years
+  age_7_9: [73, 108]    # 7-9 years
+  age_10_12: [109, 144]  # 10-12 years (for edge cases near upper bound)
+
+# RDA values per age group
+rda_values:
+  age_4_6:
+    energy_kcal: 1360
+    protein: 16.0       # grams — key name matches nutrient_summary field
+    fat: 25.0
+    carbohydrate: 130.0
+    dietary_fiber: 20.0
+    sugar: 25.0          # WHO free sugars limit ~5-10% of energy ≈ 17-34g
+    calcium: 550.0
+    iron: 11.0
+    zinc: 4.5
+    vitamin_c: 27.0
+    thiamin: 0.7
+    folate: 115.0
+
+  age_7_9:
+    energy_kcal: 1700
+    protein: 23.0
+    fat: 30.0
+    carbohydrate: 130.0
+    dietary_fiber: 25.0
+    sugar: 30.0
+    calcium: 650.0
+    iron: 15.0
+    zinc: 5.9
+    vitamin_c: 33.0
+    thiamin: 0.8
+    folate: 135.0
+
+  age_10_12:
+    energy_kcal: 2190     # average of boys (2220) and girls (2060)
+    protein: 32.0
+    fat: 35.0
+    carbohydrate: 130.0
+    dietary_fiber: 30.0
+    sugar: 38.0
+    calcium: 850.0
+    iron: 19.0            # average of boys (16) and girls (22)
+    zinc: 7.0
+    vitamin_c: 43.0
+    thiamin: 1.05
+    folate: 167.5         # average of boys (165) and girls (170)
