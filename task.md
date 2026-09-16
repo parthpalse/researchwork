@@ -57,4 +57,4 @@
 ## Final
 - [x] README.md
 - [x] Run all tests green (19 of 19 tests passed)
-- [ ] Verify frontend build
+- [x] Verify frontend build
