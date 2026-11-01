@@ -1,34 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { ChildInput, NutrientSummary, AssessResponse, MealEntry, MealLogRecord } from './lib/types';
-import { assessChild, saveChild, logMeals, getChildOverview } from './lib/api';
+import { ChildInput, NutrientSummary, AssessResponse, MealEntry, MealLogRecord, Me, ChildListItem } from './lib/types';
+import { assessChild, saveChild, logMeals, getChildOverview, listChildren } from './lib/api';
 import { IntakeForm } from './pages/IntakeForm';
 import { MealLogger } from './pages/MealLogger';
 import { ParentView } from './pages/ParentView';
 import { ClinicianView } from './pages/ClinicianView';
-import { HeartPulse, User, ShieldAlert, Utensils, ClipboardList, Ruler, FolderOpen } from 'lucide-react';
+import { ChildrenList } from './components/ChildrenList';
+import { HeartPulse, User, ShieldAlert, Utensils, ClipboardList, Ruler, LogOut } from 'lucide-react';
 
 type ViewMode = 'intake' | 'parent' | 'clinician';
 
-// Remember the last child on this device so a page refresh does not lose them
-const LAST_CHILD_KEY = 'nutriscan:lastChildId';
+// Remember the last child per account on this device, so a refresh does not lose them
+const lastChildKey = (userId: string) => `nutriscan:lastChildId:${userId}`;
 
-function readLastChildId(): string {
+function readLastChildId(userId: string): string {
   try {
-    return localStorage.getItem(LAST_CHILD_KEY) || '';
+    return localStorage.getItem(lastChildKey(userId)) || '';
   } catch {
     return '';
   }
 }
 
-function rememberChildId(childId: string) {
+function rememberChildId(userId: string, childId: string) {
   try {
-    localStorage.setItem(LAST_CHILD_KEY, childId);
+    localStorage.setItem(lastChildKey(userId), childId);
   } catch {
     // storage blocked (private mode): the app still works, it just won't remember
   }
 }
 
-export const App: React.FC = () => {
+interface AppProps {
+  me: Me;
+  onSignOut: () => void;
+}
+
+export const App: React.FC<AppProps> = ({ me, onSignOut }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('intake');
   const [childData, setChildData] = useState<ChildInput | null>(null);
   const [meals, setMeals] = useState<MealEntry[]>([]);
@@ -37,8 +43,19 @@ export const App: React.FC = () => {
   const [assessment, setAssessment] = useState<AssessResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openId, setOpenId] = useState(readLastChildId);
+  const [childList, setChildList] = useState<ChildListItem[]>([]);
+  const [childListLoading, setChildListLoading] = useState(true);
+  const [newChildCount, setNewChildCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'anthropometrics' | 'meals'>('anthropometrics');
+
+  const isClinician = me.role === 'clinician';
+
+  const refreshChildList = () => {
+    listChildren()
+      .then(setChildList)
+      .catch(() => {})
+      .finally(() => setChildListLoading(false));
+  };
 
   const openView = (mode: ViewMode) => {
     if (mode !== 'intake' && !assessment) {
@@ -56,20 +73,29 @@ export const App: React.FC = () => {
     setAssessment(overview.latest_assessment);
     setNutrientSummary(null);
     setMeals([]);
-    rememberChildId(childId);
-    setOpenId(childId);
+    rememberChildId(me.user_id, childId);
     return overview;
   };
 
-  // Reopen the last child after a refresh (silently: they may no longer exist)
+  // Load the children list, and reopen the last child after a refresh (silently)
   useEffect(() => {
-    const lastId = readLastChildId();
+    refreshChildList();
+    const lastId = readLastChildId(me.user_id);
     if (lastId) loadChild(lastId).catch(() => {});
-  }, []);
+  }, [me.user_id]);
 
-  const handleOpenChild = async () => {
-    const childId = openId.trim();
-    if (!childId) return;
+  const handleNewChild = () => {
+    setChildData(null);
+    setMeals([]);
+    setMealLogs([]);
+    setAssessment(null);
+    setNutrientSummary(null);
+    setError(null);
+    setNewChildCount((n) => n + 1); // fresh form with a new random Child ID
+    setActiveTab('anthropometrics');
+  };
+
+  const handleOpenChild = async (childId: string) => {
     setError(null);
     setLoading(true);
     try {
@@ -99,8 +125,8 @@ export const App: React.FC = () => {
         setNutrientSummary(null);
       }
       setChildData(data);
-      rememberChildId(data.child_id);
-      setOpenId(data.child_id);
+      rememberChildId(me.user_id, data.child_id);
+      refreshChildList();
       setActiveTab('meals');
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -131,6 +157,7 @@ export const App: React.FC = () => {
       setMealLogs(overview.meal_logs);
       setNutrientSummary(summary);
       setMeals([]);
+      refreshChildList();
       setViewMode('parent');
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -143,10 +170,13 @@ export const App: React.FC = () => {
   // Parent view shows the meals used in this assessment (none if it was measurements-only)
   const mealsForAssessment = assessment?.trace.dietary_risk ? mealLogs.slice(0, 1) : [];
 
+  // Parents never see the clinician audit; clinicians see all three
   const navItems: { mode: ViewMode; label: string; short: string; icon: React.ReactNode }[] = [
     { mode: 'intake', label: 'Intake & Meals', short: 'Intake', icon: <ClipboardList className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
     { mode: 'parent', label: 'Parent View', short: 'Parent', icon: <User className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
-    { mode: 'clinician', label: 'Clinician Audit', short: 'Clinician', icon: <ShieldAlert className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> },
+    ...(isClinician
+      ? [{ mode: 'clinician' as ViewMode, label: 'Clinician Audit', short: 'Clinician', icon: <ShieldAlert className="w-5 h-5 sm:w-3.5 sm:h-3.5" /> }]
+      : []),
   ];
 
   return (
@@ -164,12 +194,12 @@ export const App: React.FC = () => {
                 <span className="hidden sm:inline">Trust-First AI Nutrition Risk System</span>
               </span>
               <span className="text-[11px] text-slate-500 block truncate">
-                <span className="sm:hidden">Child nutrition risk checks</span>
-                <span className="hidden sm:inline">TY Mini Project • Hand-Rolled Fuzzy Logic + Auditable Trace</span>
+                <span className="capitalize">{me.role}</span> · {me.email}
               </span>
             </div>
           </div>
 
+          <div className="flex items-center gap-2 shrink-0">
           {/* View tabs: top bar on tablets/laptops; phones use the bottom bar below */}
           <nav className="hidden sm:flex items-center gap-1 bg-slate-100 p-1 rounded-2xl text-xs font-semibold shrink-0">
             {navItems.map((item) => (
@@ -186,6 +216,15 @@ export const App: React.FC = () => {
               </button>
             ))}
           </nav>
+          <button
+            onClick={onSignOut}
+            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+          </div>
         </div>
       </header>
 
@@ -234,33 +273,18 @@ export const App: React.FC = () => {
 
             {activeTab === 'anthropometrics' && (
               <div className="max-w-xl mx-auto space-y-4">
-                {/* Open a child saved earlier */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleOpenChild();
-                  }}
-                  className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-2"
-                >
-                  <FolderOpen className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <input
-                    type="text"
-                    value={openId}
-                    onChange={(e) => setOpenId(e.target.value)}
-                    placeholder="Open existing child, e.g. CH-2720"
-                    className="flex-1 min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading || !openId.trim()}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold disabled:opacity-50"
-                  >
-                    Open
-                  </button>
-                </form>
+                {/* Parent: own children. Clinician: all patients */}
+                <ChildrenList
+                  role={me.role}
+                  items={childList}
+                  activeChildId={childData?.child_id ?? null}
+                  loading={childListLoading}
+                  onOpen={handleOpenChild}
+                  onNewChild={handleNewChild}
+                />
 
                 <IntakeForm
-                  key={childData?.child_id ?? 'new-child'}
+                  key={childData?.child_id ?? `new-child-${newChildCount}`}
                   initialValues={childData ?? undefined}
                   onSubmit={handleSaveDetails}
                   loading={loading}
@@ -342,7 +366,7 @@ export const App: React.FC = () => {
 
       {/* Bottom tab bar on phones, like a native app */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-3">
+        <div className={`grid ${navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {navItems.map((item) => {
             const active = viewMode === item.mode;
             const locked = item.mode !== 'intake' && !assessment;

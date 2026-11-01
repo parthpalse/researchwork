@@ -1,3 +1,4 @@
+import { apiFetch } from './auth';
 import {
   ChildInput,
   NutrientSummary,
@@ -10,6 +11,8 @@ import {
   ScanSummaryResult,
   PackagedLookupResult,
   ChildOverview,
+  Me,
+  ChildListItem,
 } from './types';
 
 const BASE_URL = '/api';
@@ -18,7 +21,7 @@ export async function assessChild(
   child: ChildInput,
   nutrientSummary?: NutrientSummary | null
 ): Promise<AssessResponse> {
-  const response = await fetch(`${BASE_URL}/assess`, {
+  const response = await apiFetch(`${BASE_URL}/assess`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +50,7 @@ export async function searchDishes(
   if (category) params.append('category', category);
   if (limit) params.append('limit', String(limit));
 
-  const response = await fetch(`${BASE_URL}/dishes/search?${params.toString()}`);
+  const response = await apiFetch(`${BASE_URL}/dishes/search?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to search dishes');
   }
@@ -56,7 +59,7 @@ export async function searchDishes(
 }
 
 export async function getDishCategories(): Promise<string[]> {
-  const response = await fetch(`${BASE_URL}/dishes/categories`);
+  const response = await apiFetch(`${BASE_URL}/dishes/categories`);
   if (!response.ok) {
     throw new Error('Failed to fetch categories');
   }
@@ -69,7 +72,7 @@ export async function logMeals(
   meals: MealEntry[],
   date?: string
 ): Promise<MealLogResponse> {
-  const response = await fetch(`${BASE_URL}/meal-log`, {
+  const response = await apiFetch(`${BASE_URL}/meal-log`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -103,7 +106,7 @@ export async function identifyFood(
   mimeType: string,
   ageMonths?: number
 ): Promise<FoodScanResult> {
-  const response = await fetch(`${BASE_URL}/identify-food`, {
+  const response = await apiFetch(`${BASE_URL}/identify-food`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -126,7 +129,7 @@ export async function getScanSummary(
   items: { dish_id: string; grams: number }[],
   ageMonths?: number
 ): Promise<ScanSummaryResult> {
-  const response = await fetch(`${BASE_URL}/scan-summary`, {
+  const response = await apiFetch(`${BASE_URL}/scan-summary`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -145,7 +148,7 @@ export async function getScanSummary(
 }
 
 export async function saveChild(child: ChildInput): Promise<{ child_id: string }> {
-  const response = await fetch(`${BASE_URL}/child`, {
+  const response = await apiFetch(`${BASE_URL}/child`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -161,7 +164,7 @@ export async function saveChild(child: ChildInput): Promise<{ child_id: string }
 }
 
 export async function getChildOverview(childId: string): Promise<ChildOverview> {
-  const response = await fetch(`${BASE_URL}/child/${encodeURIComponent(childId)}`);
+  const response = await apiFetch(`${BASE_URL}/child/${encodeURIComponent(childId)}`);
   if (!response.ok) {
     throw new Error(await errorDetail(response, 'Could not load this child.'));
   }
@@ -176,7 +179,7 @@ export async function lookupPackaged(
   const params = new URLSearchParams();
   if (ageMonths !== undefined) params.append('age_months', String(ageMonths));
 
-  const response = await fetch(
+  const response = await apiFetch(
     `${BASE_URL}/packaged/${encodeURIComponent(barcode)}?${params.toString()}`
   );
   if (!response.ok) {
@@ -191,7 +194,7 @@ export async function overrideRisk(
   newRiskLevel: string,
   reason: string
 ): Promise<any> {
-  const response = await fetch(`${BASE_URL}/clinician/override`, {
+  const response = await apiFetch(`${BASE_URL}/clinician/override`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -212,7 +215,7 @@ export async function overrideRisk(
 }
 
 export async function getChildHistory(childId: string): Promise<ChildHistoryItem[]> {
-  const response = await fetch(`${BASE_URL}/child/${encodeURIComponent(childId)}/history`);
+  const response = await apiFetch(`${BASE_URL}/child/${encodeURIComponent(childId)}/history`);
   if (!response.ok) {
     throw new Error('Failed to fetch child history');
   }
@@ -221,11 +224,29 @@ export async function getChildHistory(childId: string): Promise<ChildHistoryItem
 }
 
 export async function getChildTrace(childId: string, timestamp: string): Promise<any> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${BASE_URL}/child/${encodeURIComponent(childId)}/trace/${encodeURIComponent(timestamp)}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch child trace');
+  }
+
+  return response.json();
+}
+
+export async function getMe(): Promise<Me> {
+  const response = await apiFetch(`${BASE_URL}/me`);
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not load your account.'));
+  }
+
+  return response.json();
+}
+
+export async function listChildren(): Promise<ChildListItem[]> {
+  const response = await apiFetch(`${BASE_URL}/children`);
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not load the children list.'));
   }
 
   return response.json();

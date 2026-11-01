@@ -233,3 +233,19 @@ export interface PackagedLookupResult {
   serving_totals: MealTotals;
   alerts: FoodAlert[];
 }
+
+export type Role = 'parent' | 'clinician';
+
+export interface Me {
+  user_id: string;
+  email: string | null;
+  role: Role;
+}
+
+export interface ChildListItem {
+  child_id: string;
+  age_months: number;
+  sex: Sex;
+  updated_at: string;
+  latest_risk: string | null;
+}
