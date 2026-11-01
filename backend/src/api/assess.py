@@ -5,7 +5,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
+from src.auth.users import CurrentUser, get_current_user, check_child_access
 from src.db.connection import get_db
 from src.engine.trace_builder import build_trace
 from src.engine.zscore import compute_weight_for_height_z, classify_muac
@@ -26,7 +27,7 @@ def _load_configs():
     return thresholds_cfg, rda_cfg
 
 @router.post("/assess")
-async def assess(payload: Dict[str, Any] = Body(...)):
+async def assess(payload: Dict[str, Any] = Body(...), user: CurrentUser = Depends(get_current_user)):
     """Assess child nutritional risk from anthropometrics and optional meal summary.
 
     Expects payload with:
@@ -42,6 +43,10 @@ async def assess(payload: Dict[str, Any] = Body(...)):
     for field in required_fields:
         if field not in child_data:
             raise HTTPException(status_code=422, detail=f"Missing required field: {field}")
+
+    # Check access before doing any work (another family's child ID -> 409/404)
+    async with get_db() as db:
+        await check_child_access(db, child_data['child_id'], user, allow_new=True)
 
     # Load configuration
     try:
@@ -68,8 +73,8 @@ async def assess(payload: Dict[str, Any] = Body(...)):
         # Upsert works on SQLite and Postgres (and keeps the row's created_at)
         await db.execute("""
             INSERT INTO children
-            (child_id, age_months, sex, weight_kg, height_cm, muac_cm, growth_trend, weight_for_height_z, muac_risk_band, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (child_id, age_months, sex, weight_kg, height_cm, muac_cm, growth_trend, weight_for_height_z, muac_risk_band, updated_at, owner_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(child_id) DO UPDATE SET
                 age_months = excluded.age_months, sex = excluded.sex, weight_kg = excluded.weight_kg,
                 height_cm = excluded.height_cm, muac_cm = excluded.muac_cm, growth_trend = excluded.growth_trend,
@@ -85,7 +90,8 @@ async def assess(payload: Dict[str, Any] = Body(...)):
             str(child_data['growth_trend']),
             float(wfh_z),
             muac_band,
-            datetime.now(timezone.utc).isoformat()
+            datetime.now(timezone.utc).isoformat(),
+            user.user_id,  # only used when the child is new; updates keep the owner
         ))
 
         async with db.execute("""

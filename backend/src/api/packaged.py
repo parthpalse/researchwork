@@ -2,14 +2,15 @@ import yaml
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from src.auth.users import get_current_user
 from src.db.packaged_products import get_cached_product, save_product
 from src.engine.packaged_food import normalize_barcode, normalize_off_product
 from src.engine.food_alerts import meal_totals, build_alerts
 from src.integrations.open_food_facts import fetch_product, OpenFoodFactsError
 from src.models.food_scan import PackagedProductResponse
 
-router = APIRouter(prefix="/api", tags=["packaged-food"])
+router = APIRouter(prefix="/api", tags=["packaged-food"], dependencies=[Depends(get_current_user)])
 
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 PACKAGED_PATH = CONFIG_DIR / "packaged_food.yaml"

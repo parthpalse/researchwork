@@ -1,27 +1,31 @@
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from typing import Dict, Any, List, Optional
 import json
+from src.auth.users import CurrentUser, get_current_user, check_child_access
 from src.db.connection import get_db
 from src.db.packaged_products import load_products_by_ids
 from src.engine.dietary import calculate_nutrient_summary
 from datetime import datetime, timezone
 
-router = APIRouter(prefix="/api", tags=["meals"])
+router = APIRouter(prefix="/api", tags=["meals"], dependencies=[Depends(get_current_user)])
 
 @router.post("/meal-log")
-async def add_meal_log(payload: Dict[str, Any] = Body(...)):
+async def add_meal_log(payload: Dict[str, Any] = Body(...), user: CurrentUser = Depends(get_current_user)):
     """Log meals for a child, calculate full nutritional breakdown from 20k dishes database,
     and persist log to database."""
-    child_id = payload.get("child_id", "unknown")
+    child_id = payload.get("child_id")
     meals = payload.get("meals", [])
-    log_date = payload.get("date", datetime.now(timezone.utc).date().isoformat())
+    log_date = payload.get("date") or datetime.now(timezone.utc).date().isoformat()
 
+    if not child_id:
+        raise HTTPException(status_code=422, detail="child_id is required")
     if not meals:
         raise HTTPException(status_code=422, detail="Meals list cannot be empty")
 
     dish_ids = [m.get("dish_id") for m in meals if m.get("dish_id")]
 
     async with get_db() as db:
+        await check_child_access(db, child_id, user)
         # Fetch matching dishes in one query
         placeholders = ",".join("?" for _ in dish_ids)
         query = f"SELECT * FROM dishes WHERE record_id IN ({placeholders})"

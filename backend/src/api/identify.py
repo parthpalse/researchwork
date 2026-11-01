@@ -5,7 +5,8 @@ import binascii
 from pathlib import Path
 from typing import Dict, Any, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from src.auth.users import get_current_user
 from src.db.connection import get_db
 from src.db.packaged_products import load_products_by_ids
 from src.engine.food_match import build_dish_index, match_food_part
@@ -15,7 +16,8 @@ from src.models.food_scan import (
     IdentifyFoodRequest, FoodScanResponse, ScanSummaryRequest, ScanSummaryResponse,
 )
 
-router = APIRouter(prefix="/api", tags=["food-scanner"])
+# Any signed-in user; also keeps the free Gemini quota away from anonymous callers
+router = APIRouter(prefix="/api", tags=["food-scanner"], dependencies=[Depends(get_current_user)])
 
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 SCANNER_PATH = CONFIG_DIR / "food_scanner.yaml"
