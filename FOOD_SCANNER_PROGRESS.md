@@ -32,8 +32,8 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 | 1 | Branch, config (`config/food_scanner.yaml`), sodium limits, `rapidfuzz`, `.env.example` | ✅ Done |
 | 2 | `src/engine/food_match.py` — match Gemini's description to a dish row + tests (10 passing) | ✅ Done |
 | 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests (7 passing) | ✅ Done |
-| 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) | ⏳ Next |
-| 5 | `src/api/identify.py` — `POST /api/identify-food` + mocked API tests | ⬜ To do |
+| 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) + tests (6 passing) | ✅ Done |
+| 5 | `src/api/identify.py` — `POST /api/identify-food` + mocked API tests | ⏳ Next |
 | 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⬜ To do |
 | 7 | End-to-end test with real food photos, measure real latency | ⬜ To do |
 | 8 | README update, final cleanup, merge to `main` | ⬜ To do |
@@ -58,10 +58,21 @@ share, plus allergens from base ingredient **and** cooking fat (e.g. ghee → mi
 groundnut oil → peanuts). Unknown age → youngest group (most cautious).
 Gentle wording, no blame.
 
-**Step 4 — Gemini client.** REST call with `httpx`, JSON-schema response
-(ingredient and method are restricted to our lists), retries with exponential
-backoff + jitter, 30 s timeout, at most one call per 6 s. Key from
-`GEMINI_API_KEY` only. Clear error if the key is missing or Gemini is down.
+**Step 4 — Gemini client. ✅ DONE.** REST call with `httpx` (no extra SDK).
+JSON-schema response forces ingredient / method / fat to come from our dataset
+lists (`"Other"` allowed → reported as unmatched). Retries on network errors,
+429 and 5xx with exponential backoff + jitter; 4xx (bad image/key) is not retried.
+30 s timeout, at most 1 call per 6 s app-wide. Key only from `GEMINI_API_KEY`,
+sent in a header (never in the URL or logs). Missing key → HTTP 503.
+Prompt tells Gemini to log sugar/ghee/oil/spices as Raw dry weight (the dataset's
+"Boiled sugar" row is syrup at 34 % sugar, which would under-count sweets).
+
+First live check (2 Wikimedia photos, full size ~960 px, before resizing):
+- Rice + Dal Makhani → Black urad (gravy, ghee) + tomato + cream, rice (boiled),
+  onion salad; papad → "Other" (not in dataset). Alerts: sodium, milk. **5.7 s**
+- Jalebi → Maida deep-fried + sugar. Alerts: sugar, gluten. **16.0 s**
+- Latency is much slower than the deck's 1.15 s. Step 7 will measure properly
+  with resized photos.
 
 **Step 5 — Endpoint.** `POST /api/identify-food` with `image_base64`,
 `mime_type`, optional `age_months`. Checks image type/size, never saves the image,
