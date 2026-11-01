@@ -2,6 +2,7 @@ import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
 from src.main import app
+from src.db.connection import get_db
 
 
 def _child(child_id):
@@ -41,9 +42,24 @@ async def test_save_then_update_child():
     assert data["meal_logs"] == []
 
 
+async def _seed_dish():
+    """Tests use an empty database; add the one dish this flow logs."""
+    async with get_db() as db:
+        await db.execute("""
+            INSERT INTO dishes (record_id, base_ingredient, dish_name, category, cooking_method, fat_medium,
+                                energy_kcal, protein_g, total_fat_g, carbohydrate_g, sugars_g, iron_mg,
+                                glycemic_index, nova_group)
+            VALUES ('IND-000001', 'Bajra (Pearl Millet)', 'Bajra (Pearl Millet) (Boiled)', 'Cereals/Millets',
+                    'Boiled', 'No Added Fat', 135.4, 4.01, 1.95, 25.45, 0.39, 2.78, 69, 1)
+            ON CONFLICT(record_id) DO NOTHING
+        """)
+        await db.commit()
+
+
 @pytest.mark.anyio
 async def test_overview_has_meals_and_latest_assessment():
     """Step 1 details -> step 2 meals -> assessment; parent/clinician can load it all back."""
+    await _seed_dish()
     child_id = f"CH-T{uuid.uuid4().hex[:6]}"
     async with await _client() as ac:
         await ac.post("/api/child", json=_child(child_id))

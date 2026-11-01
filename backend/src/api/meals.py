@@ -63,8 +63,9 @@ async def search_dishes(q: str = "", category: Optional[str] = None, limit: int 
         params: List[Any] = []
 
         if q:
-            clauses.append("(dish_name LIKE ? OR base_ingredient LIKE ?)")
-            params.extend([f"%{q}%", f"%{q}%"])
+            # LOWER() on both sides: case-insensitive on SQLite and Postgres alike
+            clauses.append("(LOWER(dish_name) LIKE ? OR LOWER(base_ingredient) LIKE ?)")
+            params.extend([f"%{q.lower()}%", f"%{q.lower()}%"])
 
         if category:
             clauses.append("category = ?")

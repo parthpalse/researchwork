@@ -65,36 +65,43 @@ async def assess(payload: Dict[str, Any] = Body(...)):
         wfh_z = trace_obj.get("_metadata", {}).get("weight_for_height_z", 0.0)
         muac_band = trace_obj.get("_metadata", {}).get("muac_risk_band", "normal")
 
+        # Upsert works on SQLite and Postgres (and keeps the row's created_at)
         await db.execute("""
-            INSERT OR REPLACE INTO children 
+            INSERT INTO children
             (child_id, age_months, sex, weight_kg, height_cm, muac_cm, growth_trend, weight_for_height_z, muac_risk_band, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(child_id) DO UPDATE SET
+                age_months = excluded.age_months, sex = excluded.sex, weight_kg = excluded.weight_kg,
+                height_cm = excluded.height_cm, muac_cm = excluded.muac_cm, growth_trend = excluded.growth_trend,
+                weight_for_height_z = excluded.weight_for_height_z, muac_risk_band = excluded.muac_risk_band,
+                updated_at = excluded.updated_at
         """, (
             child_data['child_id'],
-            child_data['age_months'],
+            int(child_data['age_months']),
             child_data['sex'],
-            child_data['weight_kg'],
-            child_data['height_cm'],
-            child_data['muac_cm'],
-            child_data['growth_trend'],
-            wfh_z,
+            float(child_data['weight_kg']),
+            float(child_data['height_cm']),
+            float(child_data['muac_cm']),
+            str(child_data['growth_trend']),
+            float(wfh_z),
             muac_band,
             datetime.now(timezone.utc).isoformat()
         ))
 
-        cursor = await db.execute("""
+        async with db.execute("""
             INSERT INTO traces
             (child_id, timestamp, trace_json, explanation_json, final_risk_level, final_confidence)
             VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id
         """, (
             child_data['child_id'],
             trace_obj.get('timestamp', datetime.now(timezone.utc).isoformat()),
             json.dumps(trace_obj),
             json.dumps(explanation),
             trace_obj.get('final_risk_level', 'normal'),
-            trace_obj.get('final_confidence', 0.0)
-        ))
-        trace_id = cursor.lastrowid
+            float(trace_obj.get('final_confidence', 0.0))
+        )) as cursor:
+            trace_id = (await cursor.fetchone())["id"]
         await db.commit()
 
     return {

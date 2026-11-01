@@ -41,11 +41,14 @@ async def save_product(product: Dict[str, Any], source: str) -> Dict[str, Any]:
     """Insert or refresh a product; records where it came from and when."""
     fetched_at = datetime.now(timezone.utc).isoformat()
     values = [product.get(key) for key in _COLUMNS]
-    placeholders = ", ".join("?" for _ in range(len(_COLUMNS) + 3))
+    columns = list(_COLUMNS) + ["allergens_json", "source", "fetched_at"]
+    placeholders = ", ".join("?" for _ in columns)
+    updates = ", ".join(f"{c} = excluded.{c}" for c in columns if c != "record_id")
     async with get_db() as db:
+        # Upsert works on SQLite and Postgres
         await db.execute(
-            f"INSERT OR REPLACE INTO packaged_products ({', '.join(_COLUMNS)}, allergens_json, source, fetched_at) "
-            f"VALUES ({placeholders})",
+            f"INSERT INTO packaged_products ({', '.join(columns)}) VALUES ({placeholders}) "
+            f"ON CONFLICT(record_id) DO UPDATE SET {updates}",
             values + [json.dumps(product.get("allergens", [])), source, fetched_at],
         )
         await db.commit()
