@@ -8,6 +8,7 @@ import {
   ChildHistoryItem,
   FoodScanResult,
   ScanSummaryResult,
+  PackagedLookupResult,
 } from './types';
 
 const BASE_URL = '/api';
@@ -137,6 +138,23 @@ export async function getScanSummary(
 
   if (!response.ok) {
     throw new Error(await errorDetail(response, 'Could not update the meal summary.'));
+  }
+
+  return response.json();
+}
+
+export async function lookupPackaged(
+  barcode: string,
+  ageMonths?: number
+): Promise<PackagedLookupResult> {
+  const params = new URLSearchParams();
+  if (ageMonths !== undefined) params.append('age_months', String(ageMonths));
+
+  const response = await fetch(
+    `${BASE_URL}/packaged/${encodeURIComponent(barcode)}?${params.toString()}`
+  );
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not look up this barcode.'));
   }
 
   return response.json();

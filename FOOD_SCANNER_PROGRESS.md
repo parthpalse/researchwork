@@ -37,9 +37,31 @@ a JSON schema, then search only that ingredient's ~240 rows (no all-vs-all match
 | 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ✅ Done |
 | 7 | End-to-end test with 15 real food photos, measure latency, fix what it found | ✅ Done |
 | 8 | README section, plan status, this file | ✅ Done |
+| 9 | Parent explainer moved to `anthropic` SDK + `claude-haiku-5-5` (old model retired) | ✅ Done |
+| 10 | Packaged food by barcode (Open Food Facts) — lookup, cache table, alerts, meal log, UI | ✅ Done |
+| 11 | Repeatable benchmark script (`backend/eval/`) | ⏳ Next |
 | — | **You:** click through the UI in a browser, then approve merge into `main` | ⏳ Waiting |
 
-Tests: **54 backend tests pass** (`pytest tests/` in ~3 s). Frontend `npm run build` passes.
+Tests: **70 backend tests pass** (`pytest tests/`). Frontend `npm run build` passes.
+
+**Step 10 — Packaged food. ✅ DONE.**
+- `GET /api/packaged/{barcode}?age_months=` → product (per 100 g, same format as
+  dishes), per-serving totals and alerts (sugar, sodium, allergens; "low protein"
+  skipped for a single snack). 422 bad barcode, 404 not in OFF, 502 OFF down.
+- Open Food Facts client (`src/integrations/open_food_facts.py`): User-Agent,
+  15 s timeout, retries with backoff + jitter, ≤1 call/s. No key needed.
+- Cached in new table `packaged_products` (migration `005`) with `source` and
+  `fetched_at`; refreshed after 30 days. IDs are `OFF-<barcode>`, so the existing
+  meal log, nutrient summary and `/api/scan-summary` accept them unchanged.
+- Label added sugar used when present; otherwise total sugar counted as added
+  (cautious for children; switch in `config/packaged_food.yaml`). OFF allergen
+  tags mapped to our allergen groups in the same YAML.
+- UI: "Packaged Food (Barcode)" card in the Meal Logger — type the number, or
+  "scan" from a photo where the browser supports barcode reading (Chrome on
+  Android/macOS); edit grams; alerts; add to meal log.
+- Live check: Maggi Masala (8901058851298) → 437 kcal/100 g, 862 mg sodium per
+  70 g pack → sodium + gluten alerts, 1.1 s first lookup, then from cache. Coverage
+  of Indian products in OFF is patchy (Parle-G was not found).
 
 ---
 
@@ -131,7 +153,7 @@ the sodium alert fires on many full meals.
 **Could do next (roadmap):**
 - Fine-tune YOLOv8 on Indian food images (dataset + labelling + GPU days)
 - SAM outlines / portion size from pixels or a reference object
-- Barcode scanning of packaged food (Open Food Facts)
+- ~~Barcode scanning of packaged food~~ — done in Step 10
 - Measure calorie error against weighed meals
 - Add common dishes missing from the dataset (papad, pickle, chutney)
 - ~~`src/llm/explainer.py` uses retired `claude-3-haiku-20240307`~~ — **fixed**:

@@ -1,0 +1,43 @@
+# Packaged food lookup by barcode (Open Food Facts, free public API, no key).
+# NEVER hardcode these values in Python — always load from this file.
+
+open_food_facts:
+  endpoint: https://world.openfoodfacts.org/api/v2/product
+  # OFF asks every app to identify itself with a User-Agent
+  user_agent: NutritionRiskSystem/0.1 (+https://github.com/parthpalse/researchwork)
+  request_timeout_s: 15
+  max_retries: 3
+  base_backoff_s: 1.0
+  # OFF allows ~100 product reads/min; stay polite
+  min_seconds_between_calls: 1.0
+
+# Re-fetch a cached product after this many days
+cache_days: 30
+
+barcode:
+  min_digits: 8
+  max_digits: 14
+
+default_category: Packaged Food
+default_serving_g: 30
+# Used when OFF has no NOVA group for the product
+default_nova_group: 4
+
+# When a label gives total sugars but not added sugars, count total sugars as added
+# (packaged sweets/biscuits/drinks: most sugar is added). Cautious for children.
+treat_unknown_sugar_as_added: true
+
+# Open Food Facts allergen tag -> allergen group name used in food_scanner.yaml alerts
+allergen_tags:
+  en:milk: Milk
+  en:gluten: Gluten (wheat/barley)
+  en:peanuts: Peanuts
+  en:nuts: Tree nuts
+  en:eggs: Egg
+  en:fish: Fish
+  en:crustaceans: Crustaceans
+  en:molluscs: Crustaceans
+  en:soybeans: Soy
+  en:sesame-seeds: Sesame
+  en:mustard: Mustard
+  en:sulphur-dioxide-and-sulphites: Sulphites

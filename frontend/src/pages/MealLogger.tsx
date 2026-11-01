@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MealEntry, NutrientSummary } from '../lib/types';
 import { DishSearch } from '../components/DishSearch';
 import { FoodCamera } from '../components/FoodCamera';
+import { PackagedFoodLookup } from '../components/PackagedFoodLookup';
 import { NutrientChart } from '../components/NutrientChart';
 import { logMeals } from '../lib/api';
 import { Trash2, CheckCircle, Apple } from 'lucide-react';
@@ -55,6 +56,8 @@ export const MealLogger: React.FC<MealLoggerProps> = ({
   return (
     <div className="space-y-6">
       <FoodCamera ageMonths={ageMonths} onAddMeals={handleAddScannedMeals} />
+
+      <PackagedFoodLookup ageMonths={ageMonths} onAddMeal={handleAddMeal} />
 
       <DishSearch onAddMeal={handleAddMeal} />
 

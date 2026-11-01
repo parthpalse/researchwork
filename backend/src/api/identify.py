@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 
 from fastapi import APIRouter, HTTPException
 from src.db.connection import get_db
+from src.db.packaged_products import load_products_by_ids
 from src.engine.food_match import build_dish_index, match_food_part
 from src.engine.food_alerts import meal_totals, build_alerts
 from src.llm.food_vision import identify_foods, FoodVisionError, OTHER_INGREDIENT
@@ -158,9 +159,13 @@ async def scan_summary(payload: ScanSummaryRequest):
     scanner_cfg, rda_cfg = _load_configs()
     dishes = await get_dish_index()
 
+    packaged = await load_products_by_ids(
+        [i.dish_id for i in payload.items if i.dish_id not in dishes["by_id"]]
+    )
+
     parts = []
     for item in payload.items:
-        dish = dishes["by_id"].get(item.dish_id)
+        dish = dishes["by_id"].get(item.dish_id) or packaged.get(item.dish_id)
         if dish is None:
             raise HTTPException(status_code=404, detail=f"Unknown dish_id: {item.dish_id}")
         parts.append({"dish": dish, "grams": item.grams})

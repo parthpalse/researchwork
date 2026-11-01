@@ -189,3 +189,30 @@ export interface ScanSummaryResult {
   totals: MealTotals;
   alerts: FoodAlert[];
 }
+
+export interface PackagedProduct {
+  record_id: string;
+  barcode: string;
+  dish_name: string;
+  category: string;
+  energy_kcal: number;
+  protein_g: number;
+  total_fat_g: number;
+  carbohydrate_g: number;
+  dietary_fiber_g: number;
+  sugars_g: number;
+  added_sugars_g: number | null;
+  sodium_mg: number;
+  nova_group: number;
+  serving_g: number;
+  allergens: string[];
+  source: string;
+  fetched_at: string;
+}
+
+export interface PackagedLookupResult {
+  product: PackagedProduct;
+  cached: boolean;
+  serving_totals: MealTotals;
+  alerts: FoodAlert[];
+}

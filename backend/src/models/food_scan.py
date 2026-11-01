@@ -92,3 +92,31 @@ class ScanSummaryRequest(BaseModel):
 class ScanSummaryResponse(BaseModel):
     totals: MealTotals
     alerts: List[FoodAlert]
+
+
+class PackagedProduct(BaseModel):
+    """A packaged food from Open Food Facts, in the dish format (values per 100 g)."""
+    record_id: str = Field(..., description="'OFF-<barcode>', usable as a meal-log dish_id")
+    barcode: str
+    dish_name: str
+    category: str
+    energy_kcal: float
+    protein_g: float
+    total_fat_g: float
+    carbohydrate_g: float
+    dietary_fiber_g: float = 0.0
+    sugars_g: float = 0.0
+    added_sugars_g: Optional[float] = None
+    sodium_mg: float = 0.0
+    nova_group: int
+    serving_g: float
+    allergens: List[str]
+    source: str
+    fetched_at: str
+
+
+class PackagedProductResponse(BaseModel):
+    product: PackagedProduct
+    cached: bool
+    serving_totals: MealTotals
+    alerts: List[FoodAlert]

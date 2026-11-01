@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException
 from typing import Dict, Any, List, Optional
 import json
 from src.db.connection import get_db
+from src.db.packaged_products import load_products_by_ids
 from src.engine.dietary import calculate_nutrient_summary
 from datetime import datetime, timezone
 
@@ -28,6 +29,8 @@ async def add_meal_log(payload: Dict[str, Any] = Body(...)):
             rows = await cursor.fetchall()
 
         dish_lookup = {r["record_id"]: dict(r) for r in rows}
+        # Packaged foods scanned by barcode live in their own table
+        dish_lookup.update(await load_products_by_ids([d for d in dish_ids if d not in dish_lookup]))
 
         # Calculate comprehensive nutrient summary
         nutrients = calculate_nutrient_summary(meals, dish_lookup)

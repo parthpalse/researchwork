@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.db.connection import init_db, close_db, get_db
-from src.api import assess, history, clinician, meals, trace, identify
+from src.api import assess, history, clinician, meals, trace, identify, packaged
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ app.include_router(clinician.router)
 app.include_router(meals.router)
 app.include_router(trace.router)
 app.include_router(identify.router)
+app.include_router(packaged.router)
 
 @app.get("/api/health")
 async def health():

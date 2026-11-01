@@ -27,6 +27,7 @@ def meal_totals(
 
     'added_sugar_g' counts only sugar from added_sugar_ingredients (e.g. sugar, jaggery),
     because child sugar limits refer to added/free sugar, not sugar naturally in food.
+    Packaged products carry their own 'added_sugars_g' (from the label) instead.
     """
     added = set(added_sugar_ingredients or [])
     totals = {key: 0.0 for key in _NUTRIENT_FIELDS.values()}
@@ -38,7 +39,9 @@ def meal_totals(
         factor = float(part.get("grams", 0.0)) / 100.0
         for column, key in _NUTRIENT_FIELDS.items():
             totals[key] += float(dish.get(column, 0.0) or 0.0) * factor
-        if dish.get("base_ingredient") in added:
+        if dish.get("added_sugars_g") is not None:
+            totals["added_sugar_g"] += float(dish["added_sugars_g"]) * factor
+        elif dish.get("base_ingredient") in added:
             totals["added_sugar_g"] += float(dish.get("sugars_g", 0.0) or 0.0) * factor
     return {key: round(value, 1) for key, value in totals.items()}
 
@@ -54,12 +57,15 @@ def age_group_for(age_months: Optional[int], rda_config: Dict[str, Any]) -> str:
 
 
 def find_allergens(parts: List[Dict[str, Any]], allergen_map: Dict[str, List[str]]) -> Dict[str, List[str]]:
-    """Map allergen group -> sorted list of ingredients/fats in the meal that contain it."""
+    """Map allergen group -> sorted list of ingredients/fats/products in the meal that contain it.
+    Packaged products list their allergen groups directly in dish['allergens']."""
     found: Dict[str, set] = {}
     for part in parts:
         dish = part.get("dish")
         if not dish:
             continue
+        for allergen in dish.get("allergens") or []:
+            found.setdefault(allergen, set()).add(dish.get("dish_name", "packaged food"))
         sources = {dish.get("base_ingredient"), dish.get("fat_medium")}
         for allergen, members in allergen_map.items():
             hits = sources.intersection(members)

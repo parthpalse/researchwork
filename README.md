@@ -124,6 +124,9 @@ and edits the portions before adding them to the meal log. Photos are never stor
 - Settings, limits and allergen map: `backend/config/food_scanner.yaml`.
 - Free tier quota is small (`gemini-2.5-flash`: 20 requests/day); the scanner falls back
   to `gemini-2.5-flash-lite` automatically when rate-limited.
+- Packaged food: the *Packaged Food (Barcode)* card looks up a barcode in Open Food Facts
+  (free, no key) via `GET /api/packaged/{barcode}`, caches it in `packaged_products`, and
+  logs it like any dish. Settings and allergen-tag map: `backend/config/packaged_food.yaml`.
 - Measured on 15 real photos: main dish named correctly 15/15, median latency ~5 s.
   Details, limitations and roadmap: [FOOD_SCANNER_PROGRESS.md](FOOD_SCANNER_PROGRESS.md).
 
