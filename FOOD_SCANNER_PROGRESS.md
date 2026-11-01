@@ -40,7 +40,8 @@ a JSON schema, then search only that ingredient's ~240 rows (no all-vs-all match
 | 9 | Parent explainer moved to `anthropic` SDK + `claude-haiku-5-5` (old model retired) | ✅ Done |
 | 10 | Packaged food by barcode (Open Food Facts) — lookup, cache table, alerts, meal log, UI | ✅ Done |
 | 11 | Repeatable benchmark script (`backend/eval/`) | ✅ Done |
-| — | **You:** click through the UI in a browser, then approve merge into `main` | ⏳ Waiting |
+| 12 | Deployable + installable: `Dockerfile`, `render.yaml`, PWA (manifest, icons, service worker) — see [DEPLOY.md](DEPLOY.md) | ✅ Done (image built and tested locally) |
+| — | **You:** create a Render account and click Deploy (DEPLOY.md, ~10 min) | ⏳ Waiting |
 
 Tests: **70 backend tests pass** (`pytest tests/`). Frontend `npm run build` passes.
 

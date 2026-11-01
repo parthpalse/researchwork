@@ -1,0 +1,17 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repo.
+# Builds the Dockerfile and runs the whole app (API + frontend) as one free web service.
+services:
+  - type: web
+    name: nutriscan
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to India
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true           # redeploy on every push to the branch
+    envVars:
+      # Entered by you in the Render dashboard; never stored in the repo
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false

@@ -1,0 +1,12 @@
+# Never send secrets, local environments or build output into the image
+**/.env
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+frontend/dist
+backend/data/*.db
+backend/eval/photos
+backend/eval/results
+.git
+.vscode

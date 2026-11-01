@@ -108,6 +108,11 @@ npm run dev
 
 Dashboard will be live at: `http://localhost:5173`
 
+### 3. Deploy (free, installable on phones)
+
+One Docker service on Render serves both the API and the app, and phones can install
+it from the browser (PWA). Step-by-step: [DEPLOY.md](DEPLOY.md).
+
 ---
 
 ## 📷 Food Scanner (photo → dishes → nutrients)

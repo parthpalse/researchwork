@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 import csv
@@ -125,3 +126,10 @@ async def load_dishes_csv():
 
         await db.commit()
         logger.info("Dishes table successfully populated.")
+
+
+# In production (Docker) the built React app is served from the same origin as the API.
+# Mounted last so every /api route above takes precedence.
+FRONTEND_DIST = os.getenv("FRONTEND_DIST")
+if FRONTEND_DIST and os.path.isdir(FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
