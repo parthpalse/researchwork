@@ -1,0 +1,77 @@
+# Food Scanner (photo -> dishes -> nutrients -> alerts) configuration.
+# NEVER hardcode these values in Python — always load from this file.
+
+gemini:
+  model: gemini-2.5-flash
+  endpoint: https://generativelanguage.googleapis.com/v1beta/models
+  request_timeout_s: 30
+  max_retries: 3
+  base_backoff_s: 1.0
+  # Free tier allows ~10 requests/min for Flash; stay polite (1 call per 6 s).
+  min_seconds_between_calls: 6.0
+  temperature: 0.1
+
+image:
+  max_bytes: 4000000          # reject decoded images larger than ~4 MB
+  allowed_mime_types: [image/jpeg, image/png, image/webp]
+
+matching:
+  # rapidfuzz score (0-100) needed to accept a base ingredient name
+  base_ingredient_min_score: 85
+  # Final confidence below this is shown as "possible match" for the user to check
+  min_confidence: 0.60
+  default_style: Home-Style
+  # Points for each attribute that matches inside an ingredient's block of rows
+  weights:
+    cooking_method: 3.0
+    fat_medium: 2.0
+    style: 1.0
+  # Portion guardrails for Gemini's gram estimates
+  min_grams: 5
+  max_grams: 600
+  default_grams: 100
+
+alerts:
+  # One meal "uses up" this share of the day's limit before we warn (3 meals/day)
+  meal_share_of_day: 0.33
+  # Warn about low protein when meal protein < this ratio of the meal's protein share
+  low_protein_ratio: 0.5
+  # FSSAI-listed allergen groups (+ sesame). Base ingredient / fat medium -> allergen.
+  allergens:
+    Milk:
+      - Milk (Cow)
+      - Milk (Buffalo)
+      - Curd (Whole Milk Yogurt)
+      - Buttermilk (Chaas)
+      - Paneer
+      - Khoya (Mawa)
+      - Cream (Malai)
+      - Cheese (Processed)
+      - Butter
+      - Ghee (Clarified Butter)
+      - Ghee
+    Gluten (wheat/barley):
+      - Wheat Atta (Whole)
+      - Refined Flour (Maida)
+      - Semolina (Suji/Rava)
+      - Broken Wheat (Dalia)
+      - Vermicelli (Semiya)
+      - Barley
+    Peanuts:
+      - Peanuts (Groundnut, Raw)
+      - Groundnut Oil
+    Tree nuts:
+      - Almonds
+      - Cashew Nuts
+    Egg:
+      - Egg (Hen, Whole)
+      - Egg White
+    Fish:
+      - Fish (Pomfret)
+      - Fish (Rohu)
+    Crustaceans:
+      - Prawns/Shrimp
+    Soy:
+      - Soybean (Dry)
+    Sesame:
+      - Sesame Seeds (Til)
