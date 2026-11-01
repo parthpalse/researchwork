@@ -44,3 +44,7 @@ frontend/.vite/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Food scanner benchmark: downloaded photos (see Commons for licences) and run outputs
+backend/eval/photos/
+backend/eval/results/

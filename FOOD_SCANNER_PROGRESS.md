@@ -39,7 +39,7 @@ a JSON schema, then search only that ingredient's ~240 rows (no all-vs-all match
 | 8 | README section, plan status, this file | ✅ Done |
 | 9 | Parent explainer moved to `anthropic` SDK + `claude-haiku-5-5` (old model retired) | ✅ Done |
 | 10 | Packaged food by barcode (Open Food Facts) — lookup, cache table, alerts, meal log, UI | ✅ Done |
-| 11 | Repeatable benchmark script (`backend/eval/`) | ⏳ Next |
+| 11 | Repeatable benchmark script (`backend/eval/`) | ✅ Done |
 | — | **You:** click through the UI in a browser, then approve merge into `main` | ⏳ Waiting |
 
 Tests: **70 backend tests pass** (`pytest tests/`). Frontend `npm run build` passes.
@@ -62,6 +62,28 @@ Tests: **70 backend tests pass** (`pytest tests/`). Frontend `npm run build` pas
 - Live check: Maggi Masala (8901058851298) → 437 kcal/100 g, 862 mg sodium per
   70 g pack → sodium + gluten alerts, 1.1 s first lookup, then from cache. Coverage
   of Indian products in OFF is patchy (Parle-G was not found).
+
+**Step 11 — Benchmark. ✅ DONE.** `backend/eval/photos.csv` lists the 15 labelled
+Wikimedia Commons photos (file titles + accepted dish names); `eval/run_eval.py`
+downloads them on first run (git-ignored, licences on each Commons page), shrinks
+to 640 px like the browser, calls the running backend, and writes
+`eval/results/<time>.md/.json` with accuracy, latency and the model that answered.
+Stops cleanly when the free quota runs out. Each photo costs 1 Gemini request.
+```bash
+cd backend && uv pip install -e ".[dev,eval]"
+python eval/run_eval.py            # or --limit 5
+```
+Check run (2 photos, flash-lite because flash quota was used up): 2/2 correct,
+3.7 s and 5.1 s. **Run the full 15 after 1:30 PM IST** (quota reset) to get the
+final numbers for your slides from `gemini-2.5-flash`.
+
+### Why YOLOv8 and SAM are still not done
+They cannot be completed from this machine in this session: YOLOv8 fine-tuning
+needs a labelled Indian-food image dataset (thousands of boxed images — e.g. a
+Kaggle/Roboflow set, which needs your account to download and a licence check) and
+hours to days of GPU training (Colab/Kaggle), then evaluation. SAM portion sizing
+also needs a reference-object method and weighed meals to validate. Keep both on
+the roadmap slide; the current Gemini pipeline is the honest "v1".
 
 ---
 

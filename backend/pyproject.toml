@@ -21,3 +21,6 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
 ]
+eval = [
+    "pillow>=10.0.0",
+]
