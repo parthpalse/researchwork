@@ -41,7 +41,7 @@ a JSON schema, then search only that ingredient's ~240 rows (no all-vs-all match
 | 10 | Packaged food by barcode (Open Food Facts) — lookup, cache table, alerts, meal log, UI | ✅ Done |
 | 11 | Repeatable benchmark script (`backend/eval/`) | ✅ Done |
 | 12 | Deployable + installable: `Dockerfile`, `render.yaml`, PWA (manifest, icons, service worker) — see [DEPLOY.md](DEPLOY.md) | ✅ Done (image built and tested locally) |
-| — | **You:** create a Render account and click Deploy (DEPLOY.md, ~10 min) | ⏳ Waiting |
+| 13 | **Deployed** on Render (free, Singapore): https://nutriscan-jlp1.onrender.com — site, PWA, dish search, barcode lookup and a real photo scan verified live (2026-11-02) | ✅ Done |
 
 Tests: **70 backend tests pass** (`pytest tests/`). Frontend `npm run build` passes.
 

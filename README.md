@@ -110,8 +110,11 @@ Dashboard will be live at: `http://localhost:5173`
 
 ### 3. Deploy (free, installable on phones)
 
+**Live:** https://nutriscan-jlp1.onrender.com (Render free plan — first open after a quiet
+period takes ~30–60 s). On a phone, open it and choose *Install app / Add to Home Screen*.
+
 One Docker service on Render serves both the API and the app, and phones can install
-it from the browser (PWA). Step-by-step: [DEPLOY.md](DEPLOY.md).
+it from the browser (PWA). Every push to `main` redeploys. Step-by-step: [DEPLOY.md](DEPLOY.md).
 
 ---
 
