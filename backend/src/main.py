@@ -4,8 +4,13 @@ from contextlib import asynccontextmanager
 import os
 import csv
 import logging
+from dotenv import load_dotenv
+
+# Load backend/.env before modules that read environment variables are imported
+load_dotenv()
+
 from src.db.connection import init_db, close_db, get_db
-from src.api import assess, history, clinician, meals, trace
+from src.api import assess, history, clinician, meals, trace, identify
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +45,7 @@ app.include_router(history.router)
 app.include_router(clinician.router)
 app.include_router(meals.router)
 app.include_router(trace.router)
+app.include_router(identify.router)
 
 @app.get("/api/health")
 async def health():

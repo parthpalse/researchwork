@@ -33,8 +33,8 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 | 2 | `src/engine/food_match.py` — match Gemini's description to a dish row + tests (10 passing) | ✅ Done |
 | 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests (7 passing) | ✅ Done |
 | 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) + tests (6 passing) | ✅ Done |
-| 5 | `src/api/identify.py` — `POST /api/identify-food` + mocked API tests | ⏳ Next |
-| 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⬜ To do |
+| 5 | `src/api/identify.py` — `POST /api/identify-food` + `POST /api/scan-summary` + tests (7 passing) | ✅ Done |
+| 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⏳ Next |
 | 7 | End-to-end test with real food photos, measure real latency | ⬜ To do |
 | 8 | README update, final cleanup, merge to `main` | ⬜ To do |
 
@@ -74,10 +74,20 @@ First live check (2 Wikimedia photos, full size ~960 px, before resizing):
 - Latency is much slower than the deck's 1.15 s. Step 7 will measure properly
   with resized photos.
 
-**Step 5 — Endpoint.** `POST /api/identify-food` with `image_base64`,
-`mime_type`, optional `age_months`. Checks image type/size, never saves the image,
-returns items + matches + nutrient totals + alerts + measured latency. Tests mock
-Gemini.
+**Step 5 — Endpoint. ✅ DONE.**
+- `POST /api/identify-food` — body `image_base64` (plain or `data:` URL),
+  `mime_type`, optional `age_months`. Rejects wrong type (415), bad base64 (422),
+  >4 MB (413) *before* calling Gemini. Image is never saved. Returns items →
+  components (matched dish, grams, kcal for that portion, confidence,
+  possible-match flag), `unmatched` foods, meal totals, alerts, `latency_ms`.
+- `POST /api/scan-summary` — `[{dish_id, grams}]` + `age_months` → fresh totals
+  and alerts after the parent edits grams or removes a food.
+- Pydantic request/response models in `src/models/food_scan.py`.
+- Dish rows read from the DB once and cached in memory.
+- `main.py` now calls `load_dotenv()` — before this, `backend/.env` was never
+  read, so neither `GEMINI_API_KEY` nor `CLAUDE_API_KEY` reached the app.
+- `tests/conftest.py` closes the DB after tests → **the `pytest` hang is fixed**.
+  Full suite: **49 passed in ~3 s**.
 
 **Step 6 — Frontend.** Camera/upload button, shrink photo to ~640 px before
 upload, show each food with its matched dish, grams (editable), confidence badge
@@ -107,7 +117,7 @@ status, merge branch into `main` after review.
 
 ## Known issues found along the way
 
-- `pytest tests/` passes but never exits: the API tests open a SQLite connection
-  that is never closed. Will be fixed in Step 5 with a test fixture.
+- ~~`pytest tests/` passes but never exits~~ — fixed in Step 5 (`tests/conftest.py`).
+- ~~`backend/.env` never loaded~~ — fixed in Step 5 (`load_dotenv()` in `main.py`).
 - `src/llm/explainer.py` uses `claude-3-haiku-20240307`, which may be retired.
   If so, the app silently uses the built-in fallback message. Not part of this task.
