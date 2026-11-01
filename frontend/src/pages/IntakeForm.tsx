@@ -6,12 +6,16 @@ interface IntakeFormProps {
   initialValues?: Partial<ChildInput>;
   onSubmit: (data: ChildInput) => void;
   loading?: boolean;
+  submitLabel?: string;
+  loadingLabel?: string;
 }
 
 export const IntakeForm: React.FC<IntakeFormProps> = ({
   initialValues,
   onSubmit,
   loading = false,
+  submitLabel = 'Run Nutrition Risk Assessment',
+  loadingLabel = 'Evaluating Risk Profile...',
 }) => {
   const [childId, setChildId] = useState(initialValues?.child_id || `CH-${Math.floor(1000 + Math.random() * 9000)}`);
   const [ageMonths, setAgeMonths] = useState(initialValues?.age_months || 60);
@@ -186,7 +190,7 @@ export const IntakeForm: React.FC<IntakeFormProps> = ({
         className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl text-xs shadow-md shadow-emerald-600/10 transition-colors disabled:opacity-50"
       >
         <HeartPulse className="w-4 h-4" />
-        {loading ? 'Evaluating Risk Profile...' : 'Run Nutrition Risk Assessment'}
+        {loading ? loadingLabel : submitLabel}
       </button>
     </form>
   );

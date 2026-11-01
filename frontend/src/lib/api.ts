@@ -9,6 +9,7 @@ import {
   FoodScanResult,
   ScanSummaryResult,
   PackagedLookupResult,
+  ChildOverview,
 } from './types';
 
 const BASE_URL = '/api';
@@ -138,6 +139,31 @@ export async function getScanSummary(
 
   if (!response.ok) {
     throw new Error(await errorDetail(response, 'Could not update the meal summary.'));
+  }
+
+  return response.json();
+}
+
+export async function saveChild(child: ChildInput): Promise<{ child_id: string }> {
+  const response = await fetch(`${BASE_URL}/child`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(child),
+  });
+
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not save the child details.'));
+  }
+
+  return response.json();
+}
+
+export async function getChildOverview(childId: string): Promise<ChildOverview> {
+  const response = await fetch(`${BASE_URL}/child/${encodeURIComponent(childId)}`);
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not load this child.'));
   }
 
   return response.json();

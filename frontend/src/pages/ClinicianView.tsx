@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { AssessResponse, ChildHistoryItem } from '../lib/types';
+import { AssessResponse, ChildHistoryItem, ChildInput, MealLogRecord } from '../lib/types';
 import { TraceViewer } from '../components/TraceViewer';
+import { MealHistory } from '../components/MealHistory';
 import { getChildHistory } from '../lib/api';
-import { Stethoscope, History, FileText, ArrowLeft } from 'lucide-react';
+import { Stethoscope, History, FileText, ArrowLeft, ClipboardList, Salad } from 'lucide-react';
 
 interface ClinicianViewProps {
   assessment: AssessResponse;
+  child: ChildInput | null;
+  mealLogs: MealLogRecord[];
   onBackToIntake?: () => void;
 }
 
 export const ClinicianView: React.FC<ClinicianViewProps> = ({
   assessment,
+  child,
+  mealLogs,
   onBackToIntake,
 }) => {
   const [currentTrace, setCurrentTrace] = useState(assessment.trace);
@@ -77,6 +82,85 @@ export const ClinicianView: React.FC<ClinicianViewProps> = ({
           {assessment.explanation.clinician_note}
         </div>
       </div>
+
+      {/* Patient details + dietary findings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-slate-800 font-semibold text-xs uppercase tracking-wider">
+            <ClipboardList className="w-4 h-4 text-emerald-600" />
+            Patient Measurements
+          </div>
+          {child ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              {[
+                ['Age', `${child.age_months} months (${(child.age_months / 12).toFixed(1)} y)`],
+                ['Sex', child.sex === 'M' ? 'Male' : 'Female'],
+                ['Height', `${child.height_cm} cm`],
+                ['Weight', `${child.weight_kg} kg`],
+                ['MUAC', `${child.muac_cm} cm`],
+                ['Growth trend', child.growth_trend],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-slate-400">{label}</dt>
+                  <dd className={`font-semibold text-slate-700 ${label === 'Growth trend' ? 'capitalize' : ''}`}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-xs text-slate-400">Measurements not available.</p>
+          )}
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-slate-800 font-semibold text-xs uppercase tracking-wider">
+            <Salad className="w-4 h-4 text-emerald-600" />
+            Dietary Risk (from logged meals)
+          </div>
+          {currentTrace.dietary_risk ? (
+            <dl className="space-y-2 text-xs">
+              <div>
+                <dt className="text-slate-400">Nutrient gaps (&lt;50% RDA)</dt>
+                <dd className="font-semibold text-slate-700">
+                  {currentTrace.dietary_risk.nutrient_gaps.join(', ') || 'None'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-400">Excess</dt>
+                <dd className="font-semibold text-slate-700">
+                  {currentTrace.dietary_risk.excess_nutrients.join(', ') || 'None'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-400">Carb-weighted glycemic index</dt>
+                <dd className="font-semibold text-slate-700">
+                  {currentTrace.dietary_risk.avg_glycemic_index ?? '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-400">NOVA processing (% of servings)</dt>
+                <dd className="font-semibold text-slate-700">
+                  {Object.entries(currentTrace.dietary_risk.nova_breakdown)
+                    .filter(([, pct]) => pct > 0)
+                    .map(([group, pct]) => `NOVA ${group}: ${pct}%`)
+                    .join(' · ') || '—'}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="text-xs text-slate-400">
+              No meals were included in this assessment — anthropometric risk only.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <MealHistory
+        mealLogs={mealLogs}
+        ageMonths={child?.age_months ?? 60}
+        title="Dietary Intake Log"
+        emptyText="No meal logs recorded for this child."
+        showOlderLogs
+      />
 
       {/* Full Trace Viewer Component */}
       <TraceViewer

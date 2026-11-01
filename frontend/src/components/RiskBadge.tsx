@@ -29,7 +29,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, className = '', sho
     >
       {showIcon && <span className={`w-2 h-2 rounded-full ${dotColor}`} />}
       <span className="capitalize whitespace-nowrap">{norm || 'Unknown'} Risk</span>
-      <span className="text-slate-400 font-normal whitespace-nowrap">| {label}</span>
+      <span className="hidden sm:inline text-slate-400 font-normal whitespace-nowrap">| {label}</span>
     </span>
   );
 };

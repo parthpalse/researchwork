@@ -110,7 +110,7 @@ def build_trace(
             "nutrient_gaps": nutrient_gaps,
             "excess_nutrients": excess_nutrients,
             "nova_breakdown": nutrient_summary.get("nova_breakdown", {}),
-            "avg_glycemic_index": nutrient_summary.get("gi_score"),
+            "avg_glycemic_index": nutrient_summary.get("avg_glycemic_index"),
         }
 
     # --- Step 4: Merge all fuzzified values ---

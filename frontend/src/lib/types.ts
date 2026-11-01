@@ -118,6 +118,23 @@ export interface Dish {
   nova_group?: number;
 }
 
+export interface MealLogRecord {
+  id: number;
+  log_date: string;
+  meals: MealEntry[];
+  nutrient_summary: NutrientSummary | null;
+  created_at: string;
+}
+
+export interface ChildOverview {
+  child: ChildInput;
+  latest_assessment: (AssessResponse & {
+    clinician_override: string | null;
+    override_reason: string | null;
+  }) | null;
+  meal_logs: MealLogRecord[];
+}
+
 export interface MealLogResponse {
   child_id: string;
   date: string;

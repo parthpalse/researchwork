@@ -1,18 +1,43 @@
 import React from 'react';
-import { AssessResponse } from '../lib/types';
+import { AssessResponse, MealLogRecord } from '../lib/types';
 import { RiskBadge } from '../components/RiskBadge';
-import { Sparkles, HeartHandshake, ArrowRight, ShieldCheck } from 'lucide-react';
+import { MealHistory } from '../components/MealHistory';
+import { Sparkles, HeartHandshake, ArrowRight, ShieldCheck, Salad, Utensils } from 'lucide-react';
 
 interface ParentViewProps {
   assessment: AssessResponse;
+  mealLogs: MealLogRecord[];
+  ageMonths: number;
   onNewAssessment?: () => void;
+  onLogMeals?: () => void;
 }
+
+// Engine field names -> words a parent understands
+const NUTRIENT_WORDS: Record<string, string> = {
+  protein: 'protein (dal, curd, paneer, eggs, sprouts)',
+  iron: 'iron (green leafy vegetables, ragi, jaggery, rajma)',
+  protein_pct_rda: 'protein',
+  iron_pct_rda: 'iron',
+  sugar_g: 'sweets and sugary drinks',
+  gi_score: 'quick-digesting foods like white bread and sweets',
+  nova_score: 'packaged and processed snacks',
+};
+
+const word = (field: string) => NUTRIENT_WORDS[field] || field.replace(/_/g, ' ');
 
 export const ParentView: React.FC<ParentViewProps> = ({
   assessment,
+  mealLogs,
+  ageMonths,
   onNewAssessment,
+  onLogMeals,
 }) => {
   const { trace, explanation } = assessment;
+  const dietary = trace.dietary_risk;
+  const foodNotes = [
+    ...(dietary?.nutrient_gaps || []).map((f) => `A little more ${word(f)} would help.`),
+    ...(dietary?.excess_nutrients || []).map((f) => `Try a little less ${word(f)}.`),
+  ];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -72,8 +97,39 @@ export const ParentView: React.FC<ParentViewProps> = ({
           </p>
         </div>
 
+        {/* Food notes from the logged meals */}
+        {dietary && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold text-sm">
+              <Salad className="w-5 h-5 text-emerald-600" />
+              <h3>What We Noticed in the Meals</h3>
+            </div>
+            {foodNotes.length > 0 ? (
+              <ul className="space-y-1.5">
+                {foodNotes.map((note) => (
+                  <li key={note} className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-slate-600 bg-emerald-50/60 border border-emerald-100 rounded-xl px-3 py-2">
+                The meals look well balanced. Keep it up!
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Calming Action Buttons */}
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
+          {onLogMeals && (
+            <button
+              onClick={onLogMeals}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold transition-colors shadow-sm"
+            >
+              <Utensils className="w-4 h-4" /> Log Today's Meals
+            </button>
+          )}
           {onNewAssessment && (
             <button
               onClick={onNewAssessment}
@@ -84,6 +140,13 @@ export const ParentView: React.FC<ParentViewProps> = ({
           )}
         </div>
       </div>
+
+      <MealHistory
+        mealLogs={mealLogs}
+        ageMonths={ageMonths}
+        title="Meals Used in This Check"
+        emptyText="No meals were logged for this check yet. Log today's meals to get food-specific guidance."
+      />
     </div>
   );
 };
