@@ -3,6 +3,9 @@
 
 gemini:
   model: gemini-2.5-flash
+  # Free tier quota is per model and small (gemini-2.5-flash: 20 requests/day, checked
+  # 2026-11-02). When a model is rate-limited (HTTP 429) we move on to the next one.
+  fallback_models: [gemini-2.5-flash-lite]
   endpoint: https://generativelanguage.googleapis.com/v1beta/models
   request_timeout_s: 30
   max_retries: 3
@@ -30,6 +33,20 @@ matching:
     style: 1.0
   # Share of confidence that depends on how many attributes matched (rest = ingredient match)
   attribute_weight: 0.4
+  # Not every ingredient has every cooking method (e.g. rice has no Gravy-Stewed rows).
+  # Fall back to the closest methods in this order, never to a fattier method by accident.
+  similar_methods:
+    Gravy-Stewed: [Pressure-Cooked, Shallow-Fried (Tadka), Boiled]
+    Pressure-Cooked: [Boiled, Gravy-Stewed, Shallow-Fried (Tadka)]
+    Shallow-Fried (Tadka): [Griddled (Tava), Roasted, Gravy-Stewed]
+    Griddled (Tava): [Roasted, Shallow-Fried (Tadka)]
+    Roasted: [Griddled (Tava), Shallow-Fried (Tadka)]
+    Boiled: [Pressure-Cooked, Raw]
+    Fermented: [Boiled, Pressure-Cooked]
+    Deep-Fried: [Shallow-Fried (Tadka), Griddled (Tava)]
+    Raw: [Boiled]
+  # Share of the cooking_method points given to the 1st, 2nd, 3rd similar method
+  similar_method_credit: [0.6, 0.4, 0.2]
   # Portion guardrails for Gemini's gram estimates
   min_grams: 5
   max_grams: 600
@@ -40,6 +57,11 @@ alerts:
   meal_share_of_day: 0.33
   # Warn about low protein when meal protein < this ratio of the meal's protein share
   low_protein_ratio: 0.5
+  # The daily sugar limit in rda_children.yaml is a WHO *free/added* sugar limit, so the
+  # alert only counts sugar from these ingredients (not natural sugar in milk, fruit, veg).
+  added_sugar_ingredients:
+    - Sugar (White)
+    - Jaggery (Gur)
   # FSSAI-listed allergen groups (+ sesame). Base ingredient / fat medium -> allergen.
   allergens:
     Milk:

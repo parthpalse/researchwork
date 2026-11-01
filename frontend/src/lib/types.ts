@@ -162,6 +162,7 @@ export interface MealTotals {
   carbs_g: number;
   fiber_g: number;
   sugar_g: number;
+  added_sugar_g: number;
   sodium_mg: number;
 }
 

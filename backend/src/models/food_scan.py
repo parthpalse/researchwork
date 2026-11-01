@@ -53,6 +53,7 @@ class MealTotals(BaseModel):
     carbs_g: float
     fiber_g: float
     sugar_g: float
+    added_sugar_g: float = Field(0.0, description="Sugar from added sugar/jaggery only")
     sodium_mg: float
 
 

@@ -138,12 +138,12 @@ async def identify_food(payload: IdentifyFoodRequest):
         items.append({"name": item.get("name", "Unknown food"),
                       "model_confidence": model_confidence, "components": components})
 
-    totals = meal_totals(matched_parts)
+    totals = meal_totals(matched_parts, scanner_cfg["alerts"]["added_sugar_ingredients"])
     alerts = build_alerts(totals, matched_parts, payload.age_months, rda_cfg, scanner_cfg)
 
     return {
         "is_food": bool(vision.get("is_food")),
-        "model": scanner_cfg["gemini"]["model"],
+        "model": vision.get("model", scanner_cfg["gemini"]["model"]),
         "latency_ms": int((time.perf_counter() - started) * 1000),
         "items": items,
         "unmatched": unmatched,
@@ -165,5 +165,5 @@ async def scan_summary(payload: ScanSummaryRequest):
             raise HTTPException(status_code=404, detail=f"Unknown dish_id: {item.dish_id}")
         parts.append({"dish": dish, "grams": item.grams})
 
-    totals = meal_totals(parts)
+    totals = meal_totals(parts, scanner_cfg["alerts"]["added_sugar_ingredients"])
     return {"totals": totals, "alerts": build_alerts(totals, parts, payload.age_months, rda_cfg, scanner_cfg)}

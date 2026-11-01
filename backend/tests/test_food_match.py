@@ -17,6 +17,8 @@ CONFIG = {
         "default_style": "Home-Style",
         "weights": {"cooking_method": 3.0, "fat_medium": 2.0, "style": 1.0},
         "attribute_weight": 0.4,
+        "similar_methods": {"Gravy-Stewed": ["Pressure-Cooked", "Shallow-Fried (Tadka)", "Boiled"]},
+        "similar_method_credit": [0.6, 0.4, 0.2],
         "min_grams": 5,
         "max_grams": 600,
         "default_grams": 100,
@@ -97,6 +99,21 @@ def test_low_model_confidence_is_possible_match(index):
          "fat_medium": "No Added Fat", "model_confidence": 0.4}, index, CONFIG)
     assert result["matched"] is True
     assert result["possible_match"] is True
+
+
+def test_missing_method_falls_back_to_similar_not_deep_fried():
+    rows = [
+        {"record_id": "R1", "base_ingredient": "Rice (Milled)", "cooking_method": "Deep-Fried",
+         "fat_medium": "Ghee", "dish_name": "Rice (Milled) (Deep-Fried in Ghee) [Home-Style]"},
+        {"record_id": "R2", "base_ingredient": "Rice (Milled)", "cooking_method": "Boiled",
+         "fat_medium": "No Added Fat", "dish_name": "Rice (Milled) (Boiled)"},
+        {"record_id": "R3", "base_ingredient": "Rice (Milled)", "cooking_method": "Pressure-Cooked",
+         "fat_medium": "Ghee", "dish_name": "Rice (Milled) (Pressure-Cooked with Ghee) [Home-Style]"},
+    ]
+    # Rice has no Gravy-Stewed rows (e.g. biryani rice) -> closest is Pressure-Cooked, not Deep-Fried
+    part = {"base_ingredient": "Rice (Milled)", "cooking_method": "Gravy-Stewed", "fat_medium": "Ghee"}
+    result = match_food_part(part, build_dish_index(rows), CONFIG)
+    assert result["dish"]["record_id"] == "R3"
 
 
 def test_unknown_ingredient_is_unmatched(index):

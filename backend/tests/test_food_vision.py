@@ -73,7 +73,7 @@ async def test_success_sends_key_in_header_and_parses_json(mock_gemini):
     seen, responses = mock_gemini
     responses.append(httpx.Response(200, json=_gemini_body(GEMINI_RESULT)))
     result = await _call()
-    assert result == GEMINI_RESULT
+    assert result == {**GEMINI_RESULT, "model": "gemini-test"}
     assert seen[0].headers["x-goog-api-key"] == "test-key"
     assert "key=" not in str(seen[0].url)  # key never in the URL (would leak into logs)
     assert str(seen[0].url).endswith("/gemini-test:generateContent")
@@ -84,11 +84,36 @@ async def test_retries_on_server_error_then_succeeds(mock_gemini):
     seen, responses = mock_gemini
     responses.extend([
         httpx.Response(503, json={}),
+        httpx.Response(500, json={}),
+        httpx.Response(200, json=_gemini_body(GEMINI_RESULT)),
+    ])
+    assert (await _call())["items"] == GEMINI_RESULT["items"]
+    assert len(seen) == 3
+
+
+@pytest.mark.anyio
+async def test_rate_limit_moves_to_fallback_model(mock_gemini, monkeypatch):
+    seen, responses = mock_gemini
+    monkeypatch.setitem(CONFIG["gemini"], "fallback_models", ["gemini-backup"])
+    responses.extend([
         httpx.Response(429, json={}),
         httpx.Response(200, json=_gemini_body(GEMINI_RESULT)),
     ])
-    assert await _call() == GEMINI_RESULT
-    assert len(seen) == 3
+    result = await _call()
+    assert result["model"] == "gemini-backup"
+    assert str(seen[0].url).endswith("/gemini-test:generateContent")
+    assert str(seen[1].url).endswith("/gemini-backup:generateContent")
+
+
+@pytest.mark.anyio
+async def test_all_models_rate_limited_returns_429(mock_gemini, monkeypatch):
+    seen, responses = mock_gemini
+    monkeypatch.setitem(CONFIG["gemini"], "fallback_models", ["gemini-backup"])
+    responses.extend([httpx.Response(429, json={}), httpx.Response(429, json={})])
+    with pytest.raises(FoodVisionError) as err:
+        await _call()
+    assert err.value.status_code == 429
+    assert len(seen) == 2  # one try per model, no pointless retries
 
 
 @pytest.mark.anyio

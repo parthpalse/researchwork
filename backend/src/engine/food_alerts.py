@@ -19,9 +19,18 @@ _NUTRIENT_FIELDS = {
 }
 
 
-def meal_totals(parts: List[Dict[str, Any]]) -> Dict[str, float]:
-    """Sum nutrients of matched parts. Each part: {'dish': row per 100 g, 'grams': float}."""
+def meal_totals(
+    parts: List[Dict[str, Any]],
+    added_sugar_ingredients: Optional[List[str]] = None
+) -> Dict[str, float]:
+    """Sum nutrients of matched parts. Each part: {'dish': row per 100 g, 'grams': float}.
+
+    'added_sugar_g' counts only sugar from added_sugar_ingredients (e.g. sugar, jaggery),
+    because child sugar limits refer to added/free sugar, not sugar naturally in food.
+    """
+    added = set(added_sugar_ingredients or [])
     totals = {key: 0.0 for key in _NUTRIENT_FIELDS.values()}
+    totals["added_sugar_g"] = 0.0
     for part in parts:
         dish = part.get("dish")
         if not dish:
@@ -29,6 +38,8 @@ def meal_totals(parts: List[Dict[str, Any]]) -> Dict[str, float]:
         factor = float(part.get("grams", 0.0)) / 100.0
         for column, key in _NUTRIENT_FIELDS.items():
             totals[key] += float(dish.get(column, 0.0) or 0.0) * factor
+        if dish.get("base_ingredient") in added:
+            totals["added_sugar_g"] += float(dish.get("sugars_g", 0.0) or 0.0) * factor
     return {key: round(value, 1) for key, value in totals.items()}
 
 
@@ -74,13 +85,14 @@ def build_alerts(
     alerts: List[Dict[str, Any]] = []
 
     sugar_limit = rda.get("sugar")
-    if sugar_limit and totals["sugar_g"] > sugar_limit * share:
+    added_sugar = totals.get("added_sugar_g", 0.0)
+    if sugar_limit and added_sugar > sugar_limit * share:
         alerts.append({
             "type": "high_sugar",
-            "value": totals["sugar_g"],
+            "value": added_sugar,
             "meal_limit": round(sugar_limit * share, 1),
             "message": (
-                f"This meal has about {totals['sugar_g']} g of sugar — more than a third of "
+                f"This meal has about {added_sugar} g of added sugar — more than a third of "
                 f"the day's {sugar_limit:g} g limit for this age. Fruit or a smaller sweet "
                 f"portion can help balance the day."
             ),

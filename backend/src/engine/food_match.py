@@ -61,12 +61,25 @@ def clamp_grams(grams: Optional[float], config: Dict[str, Any]) -> float:
     return float(min(max(grams, matching["min_grams"]), matching["max_grams"]))
 
 
+def _method_credit(dish_method: Optional[str], wanted: Optional[str], config: Dict[str, Any]) -> float:
+    """1.0 for the exact method, partial credit for a configured similar method, else 0."""
+    if not wanted or not dish_method:
+        return 0.0
+    if dish_method == wanted:
+        return 1.0
+    similar = config["matching"].get("similar_methods", {}).get(wanted, [])
+    credits = config["matching"].get("similar_method_credit", [])
+    if dish_method in similar:
+        rank = similar.index(dish_method)
+        return credits[rank] if rank < len(credits) else 0.0
+    return 0.0
+
+
 def _attribute_points(dish: Dict[str, Any], part: Dict[str, Any], config: Dict[str, Any]) -> float:
     weights = config["matching"]["weights"]
-    points = 0.0
-
-    if part.get("cooking_method") and dish.get("cooking_method") == part["cooking_method"]:
-        points += weights["cooking_method"]
+    points = weights["cooking_method"] * _method_credit(
+        dish.get("cooking_method"), part.get("cooking_method"), config
+    )
     if part.get("fat_medium") and dish.get("fat_medium") == part["fat_medium"]:
         points += weights["fat_medium"]
 

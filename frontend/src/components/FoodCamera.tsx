@@ -306,7 +306,7 @@ export const FoodCamera: React.FC<FoodCameraProps> = ({ ageMonths, onAddMeals })
           {[
             ['Energy', `${Math.round(totals.energy_kcal)} kcal`],
             ['Protein', `${totals.protein_g} g`],
-            ['Sugar', `${totals.sugar_g} g`],
+            ['Added sugar', `${totals.added_sugar_g} g`],
             ['Sodium', `${Math.round(totals.sodium_mg)} mg`],
           ].map(([label, value]) => (
             <div key={label} className="bg-slate-50 rounded-xl py-2">

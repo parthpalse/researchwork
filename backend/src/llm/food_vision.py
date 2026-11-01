@@ -14,7 +14,7 @@ from src.llm.prompts import FOOD_VISION_PROMPT
 OTHER_INGREDIENT = "Other"
 
 _rate_lock = asyncio.Lock()
-_last_call_at = 0.0
+_last_call_at: Dict[str, float] = {}
 
 
 class FoodVisionError(Exception):
@@ -60,14 +60,13 @@ def build_response_schema(
     }
 
 
-async def _wait_for_rate_limit(min_interval_s: float) -> None:
-    """Allow at most one Gemini call per min_interval_s across the whole app."""
-    global _last_call_at
+async def _wait_for_rate_limit(model: str, min_interval_s: float) -> None:
+    """Allow at most one call per min_interval_s to each model (quotas are per model)."""
     async with _rate_lock:
-        wait = _last_call_at + min_interval_s - time.monotonic()
+        wait = _last_call_at.get(model, 0.0) + min_interval_s - time.monotonic()
         if wait > 0:
             await asyncio.sleep(wait)
-        _last_call_at = time.monotonic()
+        _last_call_at[model] = time.monotonic()
 
 
 async def identify_foods(
@@ -78,13 +77,18 @@ async def identify_foods(
     fat_media: List[str],
     config: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Ask Gemini what foods are in the image. Returns {'is_food': bool, 'items': [...]}."""
+    """Ask Gemini what foods are in the image.
+
+    Returns {'is_food': bool, 'items': [...], 'model': <model that answered>}.
+    Tries config model first, then each fallback model when one is rate-limited (429)
+    or keeps failing.
+    """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise FoodVisionError("Food scanner is not configured (GEMINI_API_KEY missing).", 503)
 
     gemini = config["gemini"]
-    url = f"{gemini['endpoint']}/{gemini['model']}:generateContent"
+    models = [gemini["model"]] + list(gemini.get("fallback_models", []))
     headers = {"x-goog-api-key": api_key, "content-type": "application/json"}
 
     payload = {
@@ -106,35 +110,51 @@ async def identify_foods(
 
     max_retries = gemini["max_retries"]
     base_delay = gemini["base_backoff_s"]
+    rate_limited = 0
 
     async with httpx.AsyncClient(timeout=gemini["request_timeout_s"]) as client:
-        for attempt in range(max_retries):
-            await _wait_for_rate_limit(gemini["min_seconds_between_calls"])
-            try:
-                response = await client.post(url, headers=headers, json=payload)
+        for model in models:
+            url = f"{gemini['endpoint']}/{model}:generateContent"
+            for attempt in range(max_retries):
+                await _wait_for_rate_limit(model, gemini["min_seconds_between_calls"])
+                try:
+                    response = await client.post(url, headers=headers, json=payload)
 
-                # Bad request / bad key will not get better on retry
-                if 400 <= response.status_code < 500 and response.status_code != 429:
-                    logger.error(f"Gemini rejected request: HTTP {response.status_code}")
-                    raise FoodVisionError(
-                        f"The food recognition service rejected the request (HTTP {response.status_code}).",
-                        502,
-                    )
+                    # Free-tier quotas are per model and often daily: retrying the
+                    # same model will not help, so move on to the next one
+                    if response.status_code == 429:
+                        logger.warning(f"Gemini model {model} is rate-limited (HTTP 429)")
+                        rate_limited += 1
+                        break
 
-                response.raise_for_status()
-                data = response.json()
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                return json.loads(text)
-            except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError, KeyError, IndexError) as e:
-                logger.warning(f"Gemini attempt {attempt + 1} failed: {type(e).__name__}")
-                if attempt == max_retries - 1:
-                    raise FoodVisionError(
-                        "The food recognition service is not responding. Please try again "
-                        "or search for the dish manually.",
-                        502,
-                    )
+                    # Bad request / bad key will not get better on retry
+                    if 400 <= response.status_code < 500:
+                        logger.error(f"Gemini rejected request: HTTP {response.status_code}")
+                        raise FoodVisionError(
+                            f"The food recognition service rejected the request (HTTP {response.status_code}).",
+                            502,
+                        )
 
-                delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
-                await asyncio.sleep(delay)
+                    response.raise_for_status()
+                    data = response.json()
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    result = json.loads(text)
+                    result["model"] = model
+                    return result
+                except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError, KeyError, IndexError) as e:
+                    logger.warning(f"Gemini {model} attempt {attempt + 1} failed: {type(e).__name__}")
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
+                        await asyncio.sleep(delay)
 
-    raise FoodVisionError("The food recognition service is not responding.", 502)
+    if rate_limited == len(models):
+        raise FoodVisionError(
+            "The free food-recognition limit is used up for now. Please try again later "
+            "or search for the dish manually.",
+            429,
+        )
+    raise FoodVisionError(
+        "The food recognition service is not responding. Please try again "
+        "or search for the dish manually.",
+        502,
+    )

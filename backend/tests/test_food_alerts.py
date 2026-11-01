@@ -17,6 +17,7 @@ SCANNER_CONFIG = {
     "alerts": {
         "meal_share_of_day": 0.33,
         "low_protein_ratio": 0.5,
+        "added_sugar_ingredients": ["Sugar (White)", "Jaggery (Gur)"],
         "allergens": {
             "Milk": ["Paneer", "Ghee"],
             "Peanuts": ["Peanuts (Groundnut, Raw)", "Groundnut Oil"],
@@ -29,15 +30,28 @@ PANEER = {"base_ingredient": "Paneer", "fat_medium": "Ghee", "energy_kcal": 300.
           "dietary_fiber_g": 0.0, "sugars_g": 2.0, "sodium_mg": 40.0}
 JALEBI = {"base_ingredient": "Refined Flour (Maida)", "fat_medium": "Refined Oil",
           "energy_kcal": 400.0, "protein_g": 2.0, "total_fat_g": 15.0, "carbohydrate_g": 60.0,
-          "dietary_fiber_g": 0.5, "sugars_g": 40.0, "sodium_mg": 900.0}
+          "dietary_fiber_g": 0.5, "sugars_g": 5.0, "sodium_mg": 900.0}
+SUGAR = {"base_ingredient": "Sugar (White)", "fat_medium": "No Added Fat", "energy_kcal": 380.0,
+         "protein_g": 0.0, "total_fat_g": 0.0, "carbohydrate_g": 95.0, "dietary_fiber_g": 0.0,
+         "sugars_g": 95.0, "sodium_mg": 0.0}
+MILK = {"base_ingredient": "Milk (Cow)", "fat_medium": "No Added Fat", "energy_kcal": 67.0,
+        "protein_g": 3.2, "total_fat_g": 4.1, "carbohydrate_g": 4.4, "dietary_fiber_g": 0.0,
+        "sugars_g": 4.4, "sodium_mg": 44.0}
+ADDED = SCANNER_CONFIG["alerts"]["added_sugar_ingredients"]
 
 
 def test_meal_totals_scales_by_grams():
     totals = meal_totals([{"dish": PANEER, "grams": 50}, {"dish": JALEBI, "grams": 100}])
     assert totals["energy_kcal"] == pytest.approx(150.0 + 400.0)
     assert totals["protein_g"] == pytest.approx(9.0 + 2.0)
-    assert totals["sugar_g"] == pytest.approx(1.0 + 40.0)
+    assert totals["sugar_g"] == pytest.approx(1.0 + 5.0)
     assert totals["sodium_mg"] == pytest.approx(20.0 + 900.0)
+
+
+def test_meal_totals_added_sugar_only_from_sugar_ingredients():
+    totals = meal_totals([{"dish": MILK, "grams": 200}, {"dish": SUGAR, "grams": 10}], ADDED)
+    assert totals["sugar_g"] == pytest.approx(8.8 + 9.5)
+    assert totals["added_sugar_g"] == pytest.approx(9.5)
 
 
 def test_meal_totals_skips_unmatched():
@@ -58,27 +72,32 @@ def test_find_allergens_checks_ingredient_and_fat():
 
 
 def test_build_alerts_high_sugar_and_sodium():
-    parts = [{"dish": JALEBI, "grams": 100}]
-    alerts = build_alerts(meal_totals(parts), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
+    parts = [{"dish": JALEBI, "grams": 100}, {"dish": SUGAR, "grams": 20}]
+    alerts = build_alerts(meal_totals(parts, ADDED), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
     types = {a["type"] for a in alerts}
-    assert "high_sugar" in types       # 40 g > 25 * 0.33
+    assert "high_sugar" in types       # 19 g added > 25 * 0.33
     assert "high_sodium" in types      # 900 mg > 1500 * 0.33
     assert "low_protein" in types      # 2 g < 16 * 0.33 * 0.5
     assert "allergen" not in types
 
 
+def test_natural_sugar_does_not_trigger_sugar_alert():
+    parts = [{"dish": MILK, "grams": 250}]  # 11 g natural milk sugar, no added sugar
+    alerts = build_alerts(meal_totals(parts, ADDED), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
+    assert not any(a["type"] == "high_sugar" for a in alerts)
+
+
 def test_build_alerts_balanced_meal_only_allergen():
     parts = [{"dish": PANEER, "grams": 50}]
-    alerts = build_alerts(meal_totals(parts), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
+    alerts = build_alerts(meal_totals(parts, ADDED), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
     assert [a["type"] for a in alerts] == ["allergen"]
     assert alerts[0]["allergen"] == "Milk"
 
 
 def test_build_alerts_uses_age_specific_limits():
-    # 9 g sugar: above a third of 25 g (8.25) but below a third of 30 g (9.9)
-    dish = dict(PANEER, sugars_g=9.0, fat_medium="No Added Fat", base_ingredient="Toor Dal")
-    parts = [{"dish": dish, "grams": 100}]
-    young = build_alerts(meal_totals(parts), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
-    older = build_alerts(meal_totals(parts), parts, 90, RDA_CONFIG, SCANNER_CONFIG)
+    # 9 g added sugar: above a third of 25 g (8.25) but below a third of 30 g (9.9)
+    parts = [{"dish": PANEER, "grams": 50}, {"dish": SUGAR, "grams": 100 * 9.0 / 95.0}]
+    young = build_alerts(meal_totals(parts, ADDED), parts, 60, RDA_CONFIG, SCANNER_CONFIG)
+    older = build_alerts(meal_totals(parts, ADDED), parts, 90, RDA_CONFIG, SCANNER_CONFIG)
     assert any(a["type"] == "high_sugar" for a in young)
     assert not any(a["type"] == "high_sugar" for a in older)
