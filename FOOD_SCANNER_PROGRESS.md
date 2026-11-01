@@ -31,8 +31,8 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 |---|------|--------|
 | 1 | Branch, config (`config/food_scanner.yaml`), sodium limits, `rapidfuzz`, `.env.example` | ✅ Done |
 | 2 | `src/engine/food_match.py` — match Gemini's description to a dish row + tests (10 passing) | ✅ Done |
-| 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests | ⏳ Next |
-| 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) | ⬜ To do |
+| 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests (7 passing) | ✅ Done |
+| 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) | ⏳ Next |
 | 5 | `src/api/identify.py` — `POST /api/identify-food` + mocked API tests | ⬜ To do |
 | 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⬜ To do |
 | 7 | End-to-end test with real food photos, measure real latency | ⬜ To do |
@@ -50,10 +50,13 @@ Confidence = ingredient match × Gemini's confidence × attribute match
 "possible match". Gram estimates clamped to 5–600 g. Tested incl. a real-dataset
 check (roti → Wheat Atta, Griddled, No Added Fat).
 
-**Step 3 — Alerts.** For one scanned meal: sugar above ⅓ of the child's daily
-sugar limit, sodium above ⅓ of daily sodium limit (NASEM 2019, in
-`rda_children.yaml`), protein below half of the meal's protein share, and any
-allergen from the YAML allergen map. Gentle, non-blaming wording.
+**Step 3 — Alerts. ✅ DONE.** Meal totals (kcal, protein, fat, carbs, fibre,
+sugar, sodium) scaled by grams. Alerts per child age group:
+sugar > ⅓ of daily sugar limit, sodium > ⅓ of daily sodium limit (NASEM 2019:
+1500 mg for 4–9 y, 1800 mg for 10–12 y), protein < half of the meal's protein
+share, plus allergens from base ingredient **and** cooking fat (e.g. ghee → milk,
+groundnut oil → peanuts). Unknown age → youngest group (most cautious).
+Gentle wording, no blame.
 
 **Step 4 — Gemini client.** REST call with `httpx`, JSON-schema response
 (ingredient and method are restricted to our lists), retries with exponential
