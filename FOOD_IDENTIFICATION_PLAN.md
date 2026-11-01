@@ -3,7 +3,11 @@
 **Author:** Auto-generated implementation plan  
 **For:** Parth Palse  
 **Date:** 2026-09-16  
-**Status:** Proposed  
+**Status:** Implemented on branch `feature/food-scanner` (2026-11-02). The build differs from
+this plan where the data required it — see [FOOD_SCANNER_PROGRESS.md](FOOD_SCANNER_PROGRESS.md):
+Gemini 2.0 Flash is retired (now 2.5 Flash + Flash-Lite fallback), REST via `httpx` instead of
+the `google-genai` SDK, and matching is blocked by base ingredient (the dataset has no dish
+names like "Dal Tadka") instead of by category.  
 
 ---
 
