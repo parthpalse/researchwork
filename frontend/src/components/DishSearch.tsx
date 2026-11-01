@@ -107,7 +107,7 @@ export const DishSearch: React.FC<DishSearchProps> = ({ onAddMeal }) => {
                   {dish.category} • {dish.cooking_method}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right whitespace-nowrap pl-3 shrink-0">
                 <div className="font-medium text-slate-700">{dish.energy_kcal} kcal</div>
                 <div className="text-slate-400 text-[11px]">{dish.protein_g}g Protein</div>
               </div>

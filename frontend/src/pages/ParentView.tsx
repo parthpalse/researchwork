@@ -38,7 +38,7 @@ export const ParentView: React.FC<ParentViewProps> = ({
 
       {/* Primary Communication Card */}
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <div className="text-xs text-slate-400 font-medium">Growth Health Status</div>
             <div className="mt-1">

@@ -28,8 +28,8 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, className = '', sho
       className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${badgeColor} ${className}`}
     >
       {showIcon && <span className={`w-2 h-2 rounded-full ${dotColor}`} />}
-      <span className="capitalize">{norm || 'Unknown'} Risk</span>
-      <span className="text-slate-400 font-normal">| {label}</span>
+      <span className="capitalize whitespace-nowrap">{norm || 'Unknown'} Risk</span>
+      <span className="text-slate-400 font-normal whitespace-nowrap">| {label}</span>
     </span>
   );
 };
