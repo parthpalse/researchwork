@@ -134,8 +134,11 @@ the sodium alert fires on many full meals.
 - Barcode scanning of packaged food (Open Food Facts)
 - Measure calorie error against weighed meals
 - Add common dishes missing from the dataset (papad, pickle, chutney)
-- `src/llm/explainer.py` still uses `claude-3-haiku-20240307`, which may be
-  retired; if so the parent message silently uses the fallback template
+- ~~`src/llm/explainer.py` uses retired `claude-3-haiku-20240307`~~ — **fixed**:
+  now the official `anthropic` SDK with `claude-haiku-5-5`, JSON-schema output,
+  SDK retries/backoff, 30 s timeout, refusal → fallback template (4 tests).
+  Still needs a `CLAUDE_API_KEY` in `backend/.env` to use Claude; without one the
+  template message is used, as before.
 
 ---
 
