@@ -26,6 +26,8 @@ matching:
     cooking_method: 3.0
     fat_medium: 2.0
     style: 1.0
+  # Share of confidence that depends on how many attributes matched (rest = ingredient match)
+  attribute_weight: 0.4
   # Portion guardrails for Gemini's gram estimates
   min_grams: 5
   max_grams: 600

@@ -30,8 +30,8 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 | # | Step | Status |
 |---|------|--------|
 | 1 | Branch, config (`config/food_scanner.yaml`), sodium limits, `rapidfuzz`, `.env.example` | ✅ Done |
-| 2 | `src/engine/food_match.py` — match Gemini's description to a dish row + tests | ⏳ Next |
-| 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests | ⬜ To do |
+| 2 | `src/engine/food_match.py` — match Gemini's description to a dish row + tests (10 passing) | ✅ Done |
+| 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests | ⏳ Next |
 | 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) | ⬜ To do |
 | 5 | `src/api/identify.py` — `POST /api/identify-food` + mocked API tests | ⬜ To do |
 | 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⬜ To do |
@@ -42,12 +42,13 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 
 ## Remaining work (detail)
 
-**Step 2 — Matcher.** Build an in-memory index grouped by base ingredient. For each
-food part from Gemini: fuzzy-match the ingredient name (only 130 names) with
-`rapidfuzz`, then score rows inside that ingredient's group by cooking method,
-oil and style (weights in YAML). Return the best row + a confidence. Below
-`min_confidence` it is marked "possible match". Tests for exact, fuzzy, unknown
-ingredient, and missing method/oil.
+**Step 2 — Matcher. ✅ DONE.** Index grouped by base ingredient; ingredient name
+fuzzy-matched with `rapidfuzz` against 130 names; rows in that group scored by
+cooking method / oil / style (weights in YAML).
+Confidence = ingredient match × Gemini's confidence × attribute match
+(attribute share = `attribute_weight` 0.4). Below `min_confidence` (0.60) →
+"possible match". Gram estimates clamped to 5–600 g. Tested incl. a real-dataset
+check (roti → Wheat Atta, Griddled, No Added Fat).
 
 **Step 3 — Alerts.** For one scanned meal: sugar above ⅓ of the child's daily
 sugar limit, sodium above ⅓ of daily sodium limit (NASEM 2019, in
