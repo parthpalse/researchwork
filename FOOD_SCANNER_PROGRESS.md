@@ -34,8 +34,8 @@ search only that ingredient's ~240 rows (no slow all-vs-all matching).
 | 3 | `src/engine/food_alerts.py` — sugar / sodium / low-protein / allergen alerts + tests (7 passing) | ✅ Done |
 | 4 | `src/llm/food_vision.py` — Gemini call (retry, backoff, timeout, rate limit) + tests (6 passing) | ✅ Done |
 | 5 | `src/api/identify.py` — `POST /api/identify-food` + `POST /api/scan-summary` + tests (7 passing) | ✅ Done |
-| 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger | ⏳ Next |
-| 7 | End-to-end test with real food photos, measure real latency | ⬜ To do |
+| 6 | Frontend `FoodCamera.tsx` + wire into Meal Logger (builds clean) | ✅ Done |
+| 7 | End-to-end test with real food photos, measure real latency | ⏳ Next |
 | 8 | README update, final cleanup, merge to `main` | ⬜ To do |
 
 ---
@@ -89,9 +89,20 @@ First live check (2 Wikimedia photos, full size ~960 px, before resizing):
 - `tests/conftest.py` closes the DB after tests → **the `pytest` hang is fixed**.
   Full suite: **49 passed in ~3 s**.
 
-**Step 6 — Frontend.** Camera/upload button, shrink photo to ~640 px before
-upload, show each food with its matched dish, grams (editable), confidence badge
-and alerts. "Add to meal log" sends them to the existing Meal Logger.
+**Step 6 — Frontend. ✅ DONE.** New "Scan a Meal Photo" card at the top of the
+Meal Logger tab (`components/FoodCamera.tsx`):
+- "Take Photo" (opens the rear camera on phones) and "Upload Photo" buttons.
+- Photo shrunk in the browser to max 640 px JPEG before upload.
+- Each matched component shown with food name, dataset dish, kcal for the
+  portion, editable grams, a tick box, and a "please check" tag for
+  low-confidence matches.
+- Foods not in the dataset listed with a hint to use manual search.
+- Energy / protein / sugar / sodium totals and gentle alerts (amber for
+  nutrients, blue for allergens — no red blame colours). Editing grams or
+  unticking re-calls `/api/scan-summary`, so alerts stay correct.
+- "Add N items to Child's Meal Log" → existing meal list → existing
+  "Calculate Dietary Nutrients" flow.
+- `lib/api.ts`: `identifyFood`, `getScanSummary`; `lib/types.ts`: scan types.
 
 **Step 7 — Real test.** Run 10–20 real Indian food photos, note how many were
 right, record real latency. These are the only numbers that should go on slides.

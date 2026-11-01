@@ -124,3 +124,67 @@ export interface MealLogResponse {
   meals_count: number;
   nutrient_summary: NutrientSummary;
 }
+
+export interface ScanDish {
+  record_id: string;
+  dish_name: string;
+  category: string;
+  energy_kcal: number;
+  protein_g: number;
+  total_fat_g: number;
+  carbohydrate_g: number;
+  sugars_g: number;
+  sodium_mg: number;
+}
+
+export interface FoodComponent {
+  base_ingredient: string;
+  cooking_method: string;
+  fat_medium: string;
+  grams: number;
+  matched: boolean;
+  confidence: number;
+  possible_match: boolean;
+  energy_kcal: number;
+  dish: ScanDish | null;
+}
+
+export interface IdentifiedFood {
+  name: string;
+  model_confidence: number;
+  components: FoodComponent[];
+}
+
+export interface MealTotals {
+  energy_kcal: number;
+  protein_g: number;
+  fat_g: number;
+  carbs_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
+}
+
+export interface FoodAlert {
+  type: 'high_sugar' | 'high_sodium' | 'low_protein' | 'allergen' | string;
+  message: string;
+  value?: number | null;
+  meal_limit?: number | null;
+  allergen?: string | null;
+  sources?: string[] | null;
+}
+
+export interface FoodScanResult {
+  is_food: boolean;
+  model: string;
+  latency_ms: number;
+  items: IdentifiedFood[];
+  unmatched: string[];
+  totals: MealTotals;
+  alerts: FoodAlert[];
+}
+
+export interface ScanSummaryResult {
+  totals: MealTotals;
+  alerts: FoodAlert[];
+}

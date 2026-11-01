@@ -6,6 +6,8 @@ import {
   MealEntry,
   MealLogResponse,
   ChildHistoryItem,
+  FoodScanResult,
+  ScanSummaryResult,
 } from './types';
 
 const BASE_URL = '/api';
@@ -80,6 +82,61 @@ export async function logMeals(
   if (!response.ok) {
     const err = await response.text();
     throw new Error(err || 'Failed to log meals');
+  }
+
+  return response.json();
+}
+
+async function errorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json();
+    return typeof body.detail === 'string' ? body.detail : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function identifyFood(
+  imageBase64: string,
+  mimeType: string,
+  ageMonths?: number
+): Promise<FoodScanResult> {
+  const response = await fetch(`${BASE_URL}/identify-food`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_base64: imageBase64,
+      mime_type: mimeType,
+      age_months: ageMonths,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not identify the food. Please try again.'));
+  }
+
+  return response.json();
+}
+
+export async function getScanSummary(
+  items: { dish_id: string; grams: number }[],
+  ageMonths?: number
+): Promise<ScanSummaryResult> {
+  const response = await fetch(`${BASE_URL}/scan-summary`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      items,
+      age_months: ageMonths,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await errorDetail(response, 'Could not update the meal summary.'));
   }
 
   return response.json();

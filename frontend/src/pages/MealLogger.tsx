@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MealEntry, NutrientSummary } from '../lib/types';
 import { DishSearch } from '../components/DishSearch';
+import { FoodCamera } from '../components/FoodCamera';
 import { NutrientChart } from '../components/NutrientChart';
 import { logMeals } from '../lib/api';
 import { Trash2, CheckCircle, Apple } from 'lucide-react';
@@ -26,6 +27,11 @@ export const MealLogger: React.FC<MealLoggerProps> = ({
     setSaveSuccess(false);
   };
 
+  const handleAddScannedMeals = (entries: MealEntry[]) => {
+    setMeals((prev) => [...prev, ...entries]);
+    setSaveSuccess(false);
+  };
+
   const handleRemoveMeal = (index: number) => {
     setMeals((prev) => prev.filter((_, i) => i !== index));
     setSaveSuccess(false);
@@ -48,6 +54,8 @@ export const MealLogger: React.FC<MealLoggerProps> = ({
 
   return (
     <div className="space-y-6">
+      <FoodCamera ageMonths={ageMonths} onAddMeals={handleAddScannedMeals} />
+
       <DishSearch onAddMeal={handleAddMeal} />
 
       {/* Current Meal Log Table */}
