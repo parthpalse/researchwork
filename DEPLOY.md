@@ -29,6 +29,28 @@ API on Render's `$PORT`, contains no `.env`, and scans a food photo via Gemini.
    Check `https://<your-link>/api/health` shows `{"status":"ok",...}`.
 
 Keys live only in Render's dashboard (Environment tab) — never in the repo.
+
+### Database and login (Supabase)
+
+The live app stores children, meals and assessments in Supabase Postgres and uses
+Supabase Auth for sign-in. Set these in Render → Environment as well:
+
+| Variable | Where it comes from |
+|---|---|
+| `DATABASE_URL` | Supabase → Connect → **Session/Transaction pooler** string (write `@` in the password as `%40`) |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API Keys (public by design) |
+| `CLINICIAN_INVITE_CODE` | Any secret you choose; clinicians type it when creating their account |
+
+In Supabase → Authentication → URL Configuration, the **Site URL** must be the live
+link and the live link + `http://localhost:5173` must be in **Redirect URLs**, so
+confirmation emails open the app.
+
+- **Parents** create an account and see only the children they added.
+- **Clinicians** create an account with the invite code; they see all children, the
+  Clinician view and can override results.
+- Email confirmation is on: new accounts must click the link in their email first.
+  Supabase's free email sender allows only a few emails per hour.
 Every push to `main` redeploys automatically.
 
 ## 3. Install it on a phone
@@ -44,7 +66,7 @@ link is HTTPS.
 | Behaviour | What it means for you |
 |---|---|
 | Sleeps after ~15 min without visitors | First open after a break takes ~30–60 s. **Open the link a minute before a demo.** |
-| No permanent disk | Children, assessments and meal logs are **reset when the service restarts or redeploys**. The 20,000 dishes reload automatically. Fine for demos; for real users add a database (e.g. Supabase/Render Postgres) later. |
+| No permanent disk | Not a problem any more: all data is in Supabase, so restarts and redeploys keep it. (Without `DATABASE_URL` the app falls back to a temporary SQLite file.) |
 | Gemini free quota (~20 scans/day per model) | Shared by everyone using the link. Falls back to Flash-Lite automatically. |
 
 ## Run the same container on your laptop (optional)

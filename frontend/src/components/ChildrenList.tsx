@@ -30,7 +30,8 @@ export const ChildrenList: React.FC<ChildrenListProps> = ({
       <div className="flex items-center gap-2">
         <Users className="w-5 h-5 text-emerald-600" />
         <h3 className="font-semibold text-sm text-slate-800">
-          {role === 'clinician' ? 'All Patients' : 'My Children'} ({items.length})
+          {role === 'clinician' ? 'All Patients' : 'My Children'}
+          {!loading && ` (${items.length})`}
         </h3>
       </div>
       <button
